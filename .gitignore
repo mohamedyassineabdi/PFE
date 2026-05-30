@@ -1,0 +1,88 @@
+# Dependencies
+node_modules/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+ENV/
+
+# Build outputs
+dist/
+build/
+.vite/
+.turbo/
+
+# Test and coverage output
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+playwright-report/
+test-results/
+
+# Runtime logs
+*.log
+*.out
+*.err
+logs/
+
+# Local environment and secrets
+.env
+.env.*
+*.env
+!.env.example
+!.env.*.example
+
+# Local deployment state
+.vercel/
+.netlify/
+
+# Generated app artifacts
+UX-UI_-Agent/shared/generated/
+UX-UI_-Agent/shared/output/
+UX-UI_-Agent/output/
+CX_Chat-main/backend/UX_UI_AUDIT/.venv/
+
+# Database dumps and local databases
+CX_Chat-main/CX_DB_FINAL.sql
+*.dump
+*.backup
+*.sqlite
+*.sqlite3
+*.db
+
+# Caches
+.cache/
+.parcel-cache/
+.eslintcache
+.mcp-cache/
+.browser_cache/
+
+# Editor and OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+
+# Archives
+*.zip
+*.7z
+*.tar
+*.tar.gz
