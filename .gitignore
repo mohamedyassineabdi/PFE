@@ -49,6 +49,7 @@ logs/
 UX-UI_-Agent/shared/generated/
 UX-UI_-Agent/shared/output/
 UX-UI_-Agent/output/
+CX_Chat-main/backend/UX_UI_AUDIT/output/
 CX_Chat-main/backend/UX_UI_AUDIT/.venv/
 
 # Database dumps and local databases
