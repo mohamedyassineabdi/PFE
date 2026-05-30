@@ -24,3 +24,5 @@ tmp/
 temp/
 *.tmp
 *.bak
+
+.vercel
