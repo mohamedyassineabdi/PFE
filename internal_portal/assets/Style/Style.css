@@ -1349,19 +1349,24 @@ body.korean-language .korean-language.korean-language-flex {
 }
 
 .solutions-agent-visual {
+    --solutions-visual-offset-y: 0px;
     grid-area: 1 / 1;
     width: 100%;
     max-width: 100%;
     height: auto;
     opacity: 0;
-    transform: translateY(14px) scale(0.985);
+    transform: translateY(calc(var(--solutions-visual-offset-y) + 14px)) scale(0.985);
     transition: opacity .45s ease, transform .45s ease;
     will-change: opacity, transform;
 }
 
+.solutions-agent-visual[data-solution-visual="cx"] {
+    --solutions-visual-offset-y: clamp(80px, 7vw, 135px);
+}
+
 .solutions-agent-visual.is-active {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(var(--solutions-visual-offset-y)) scale(1);
 }
 
 .solutions-image-mobile {
