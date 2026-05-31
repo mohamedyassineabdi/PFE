@@ -1344,6 +1344,30 @@ body.korean-language .korean-language.korean-language-flex {
     filter: grayscale(1);
 }
 
+.solutions-agent-visuals {
+    display: grid;
+}
+
+.solutions-agent-visual {
+    grid-area: 1 / 1;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+    transition: opacity .45s ease, transform .45s ease;
+    will-change: opacity, transform;
+}
+
+.solutions-agent-visual.is-active {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+.solutions-image-mobile {
+    object-fit: contain;
+}
+
 .webgl {
     pointer-events: none;
     transform: translate3d(var(--webgl-cursor-x, 0px), var(--webgl-cursor-y, 0px), 0);

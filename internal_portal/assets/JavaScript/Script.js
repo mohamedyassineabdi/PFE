@@ -345,6 +345,75 @@ $(document).ready(function () {
     });
 });
 
+(() => {
+    function initSolutionsVisuals() {
+        const rows = Array.from(document.querySelectorAll("[data-solution-agent]"));
+        const visuals = Array.from(document.querySelectorAll("[data-solution-visual]"));
+
+        if (!rows.length || !visuals.length) {
+            return;
+        }
+
+        function setVisual(agent) {
+            visuals.forEach((visual) => {
+                visual.classList.toggle("is-active", visual.dataset.solutionVisual === agent);
+            });
+        }
+
+        function syncVisualToViewport() {
+            const viewportFocus = window.innerHeight * 0.52;
+            let activeRow = rows[0];
+            let closestDistance = Number.POSITIVE_INFINITY;
+
+            rows.forEach((row) => {
+                const rect = row.getBoundingClientRect();
+
+                if (rect.bottom < 0 || rect.top > window.innerHeight) {
+                    return;
+                }
+
+                const rowCenter = rect.top + rect.height / 2;
+                const distance = Math.abs(rowCenter - viewportFocus);
+
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    activeRow = row;
+                }
+            });
+
+            setVisual(activeRow.dataset.solutionAgent);
+        }
+
+        let ticking = false;
+        function requestSync() {
+            if (ticking) {
+                return;
+            }
+            ticking = true;
+            window.requestAnimationFrame(() => {
+                syncVisualToViewport();
+                ticking = false;
+            });
+        }
+
+        rows.forEach((row) => {
+            const agent = row.dataset.solutionAgent;
+            row.addEventListener("pointerenter", () => setVisual(agent));
+            row.addEventListener("focusin", () => setVisual(agent));
+        });
+
+        window.addEventListener("scroll", requestSync, { passive: true });
+        window.addEventListener("resize", requestSync);
+        syncVisualToViewport();
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initSolutionsVisuals);
+    } else {
+        initSolutionsVisuals();
+    }
+})();
+
 
 (() => {
     const webglLayer = document.querySelector(".webgl");
