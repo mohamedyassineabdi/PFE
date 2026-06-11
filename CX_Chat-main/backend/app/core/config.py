@@ -70,6 +70,14 @@ class Settings:
     benchmark_max_mistral_calls_per_assessment: int
     benchmark_provider_cooldown_seconds: float
     benchmark_max_concurrent_jobs: int
+    auth_secret_key: str
+    portal_public_url: str
+    smtp_host: str | None
+    smtp_port: int
+    smtp_username: str | None
+    smtp_password: str | None
+    smtp_from_email: str | None
+    smtp_use_tls: bool
 
     @property
     def LLM_REQUEST_TIMEOUT_SECONDS(self) -> float:
@@ -224,4 +232,12 @@ def get_settings() -> Settings:
         benchmark_max_mistral_calls_per_assessment=_get_int("BENCHMARK_MAX_MISTRAL_CALLS_PER_ASSESSMENT", 4),
         benchmark_provider_cooldown_seconds=_get_float("BENCHMARK_PROVIDER_COOLDOWN_SECONDS", 120.0),
         benchmark_max_concurrent_jobs=_get_int("BENCHMARK_MAX_CONCURRENT_JOBS", 1),
+        auth_secret_key=os.getenv("AUTH_SECRET_KEY", "development-portal-auth-secret-change-me"),
+        portal_public_url=os.getenv("PORTAL_PUBLIC_URL", "http://127.0.0.1:8080"),
+        smtp_host=os.getenv("SMTP_HOST"),
+        smtp_port=_get_int("SMTP_PORT", 587),
+        smtp_username=os.getenv("SMTP_USERNAME"),
+        smtp_password=os.getenv("SMTP_PASSWORD"),
+        smtp_from_email=os.getenv("SMTP_FROM_EMAIL"),
+        smtp_use_tls=_get_bool("SMTP_USE_TLS", True),
     )

@@ -20,9 +20,9 @@ WebFont.load({
 
 
 (() => {
-    const AUTH_EMAIL = "admin@gmail.com";
-    const AUTH_PASSWORD = "asmin123";
     const AUTH_KEY = "internalPortalAuthenticated";
+    const TOKEN_KEY = "internalPortalToken";
+    const USER_KEY = "internalPortalUser";
     const form = document.getElementById("portal-auth-form");
 
     function showLoaderBriefly() {
@@ -40,6 +40,30 @@ WebFont.load({
         }, 1200);
     }
 
+    async function validateExistingSession() {
+        let token = null;
+        try {
+            token = sessionStorage.getItem(TOKEN_KEY);
+        } catch (_error) {
+        }
+        if (!token || !window.PortalApi) {
+            return;
+        }
+        try {
+            const user = await window.PortalApi.me(token);
+            sessionStorage.setItem(AUTH_KEY, "true");
+            sessionStorage.setItem(USER_KEY, JSON.stringify(user));
+            document.documentElement.classList.add("portal-authenticated");
+        } catch (_error) {
+            sessionStorage.removeItem(AUTH_KEY);
+            sessionStorage.removeItem(TOKEN_KEY);
+            sessionStorage.removeItem(USER_KEY);
+            document.documentElement.classList.remove("portal-authenticated");
+        }
+    }
+
+    validateExistingSession();
+
     if (!form) {
         return;
     }
@@ -48,14 +72,24 @@ WebFont.load({
     const passwordInput = document.getElementById("portal-auth-password");
     const errorMessage = document.getElementById("portal-auth-error");
 
-    form.addEventListener("submit", (event) => {
+    form.addEventListener("submit", async (event) => {
         event.preventDefault();
         const email = (emailInput ? emailInput.value : "").trim().toLowerCase();
         const password = passwordInput ? passwordInput.value : "";
 
-        if (email === AUTH_EMAIL && password === AUTH_PASSWORD) {
+        if (!window.PortalApi) {
+            if (errorMessage) {
+                errorMessage.textContent = "Authentication service is unavailable.";
+            }
+            return;
+        }
+
+        try {
+            const result = await window.PortalApi.login(email, password);
             try {
                 sessionStorage.setItem(AUTH_KEY, "true");
+                sessionStorage.setItem(TOKEN_KEY, result.token);
+                sessionStorage.setItem(USER_KEY, JSON.stringify(result.user));
             } catch (_error) {
             }
             document.documentElement.classList.add("portal-authenticated");
@@ -64,10 +98,10 @@ WebFont.load({
             }
             showLoaderBriefly();
             return;
-        }
-
-        if (errorMessage) {
-            errorMessage.textContent = "Invalid email or password.";
+        } catch (error) {
+            if (errorMessage) {
+                errorMessage.textContent = error.message || "Invalid email or password.";
+            }
         }
         if (passwordInput) {
             passwordInput.value = "";

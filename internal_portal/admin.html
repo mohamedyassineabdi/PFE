@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Admin - EY Studio+ Internal Portal</title>
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <link href="assets/imgs/66e9a1b24861e4af25ba59f3_CGPT Favicon 32x32.png" rel="shortcut icon" type="image/x-icon" />
+    <link rel="stylesheet" href="assets/Style/admin.css" />
+</head>
+<body class="admin-page">
+    <main class="admin-shell">
+        <section class="admin-login" aria-labelledby="admin-login-title">
+            <div class="admin-login-frame">
+                <div class="admin-brand" aria-hidden="true">
+                    <span class="admin-brand-mark"></span>
+                    <span class="admin-brand-lockup"><span>EY</span><span>Studio</span><span>+</span></span>
+                    <span class="admin-brand-tagline">Access control</span>
+                </div>
+                <form id="admin-login-form" class="admin-card" novalidate>
+                    <div>
+                        <p class="admin-kicker">Admin</p>
+                        <h1 id="admin-login-title" class="admin-title">Sign in</h1>
+                    </div>
+                    <label class="admin-field">
+                        <span>Email</span>
+                        <input id="admin-email" name="email" type="email" autocomplete="username" required />
+                    </label>
+                    <label class="admin-field">
+                        <span>Password</span>
+                        <input id="admin-password" name="password" type="password" autocomplete="current-password" required />
+                    </label>
+                    <p id="admin-login-error" class="admin-error" role="alert" aria-live="polite"></p>
+                    <button class="admin-button" type="submit">Enter admin</button>
+                </form>
+            </div>
+        </section>
+
+        <section id="admin-dashboard" class="admin-dashboard" aria-labelledby="admin-dashboard-title">
+            <header class="admin-topbar">
+                <a class="admin-mini-brand" href="index.html" aria-label="Back to portal">
+                    <span class="admin-mini-mark" aria-hidden="true"></span>
+                    <span class="admin-mini-lockup" aria-hidden="true">
+                        <span>EY</span><span>Studio</span><span>+</span>
+                    </span>
+                    <span class="admin-mini-context">Portal Admin</span>
+                </a>
+                <button id="admin-logout" class="admin-button secondary" type="button">Sign out</button>
+            </header>
+
+            <div class="admin-layout">
+                <aside class="admin-panel">
+                    <h2>Invite user</h2>
+                    <form id="invite-form" class="admin-invite-form" novalidate>
+                        <label class="admin-field">
+                            <span>User email</span>
+                            <input id="invite-email" name="email" type="email" autocomplete="off" required />
+                        </label>
+                        <button class="admin-button" type="submit">Send invitation</button>
+                        <p id="invite-message" class="admin-note" role="status" aria-live="polite"></p>
+                        <div id="invite-link" class="invite-link" hidden></div>
+                    </form>
+                </aside>
+
+                <section class="admin-panel">
+                    <h1 id="admin-dashboard-title" class="admin-title">Users</h1>
+                    <p id="users-message" class="admin-note" role="status" aria-live="polite"></p>
+                    <div class="admin-table-wrap">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Latest login</th>
+                                    <th>Invited</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-table-body"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </section>
+    </main>
+    <script src="assets/JavaScript/portal-api.js"></script>
+    <script src="assets/JavaScript/admin.js"></script>
+</body>
+</html>

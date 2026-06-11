@@ -1,5 +1,18 @@
 version: "3.9"
 services:
+  cx-db:
+    image: postgres:16
+    container_name: cx-assessment-db
+    environment:
+      POSTGRES_DB: cx_assessment
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Barbouch123!
+    ports:
+      - "5433:5432"
+    volumes:
+      - cx_assessment_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
   metabase-db:
     image: postgres:16
     container_name: metabase-db
@@ -28,4 +41,5 @@ services:
     restart: unless-stopped
 
 volumes:
+  cx_assessment_data:
   metabase_db_data:

@@ -7,6 +7,7 @@ from app.api.routes.client import router as client_router
 from app.api.routes.admin_reference import router as admin_reference_router
 from app.api.routes.admin_capability import router as admin_capability_router
 from app.api.routes.admin_analytics import router as admin_analytics_router
+from app.api.routes.portal_auth import router as portal_auth_router
 
 api_router = APIRouter()
 api_router.include_router(health_router, tags=["health"])
@@ -16,3 +17,4 @@ api_router.include_router(client_router, tags=["client"])
 api_router.include_router(admin_reference_router, tags=["admin-reference"])
 api_router.include_router(admin_capability_router, tags=["admin-capability"])
 api_router.include_router(admin_analytics_router, tags=["admin-analytics"])
+api_router.include_router(portal_auth_router, tags=["portal-auth"])
