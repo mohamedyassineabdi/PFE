@@ -9,13 +9,15 @@ __pycache__/
 venv/
 env/
 ENV/
+*.ps1
+*json
 
 # Build outputs
 dist/
 build/
 .vite/
 .turbo/
-
+CX_Chat/backend/UX_UI_AUDIT/
 # Test and coverage output
 .pytest_cache/
 .mypy_cache/
