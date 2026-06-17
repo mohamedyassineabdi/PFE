@@ -112,6 +112,36 @@ def _allowed_origin() -> str:
     return str(os.getenv("ALLOWED_ORIGIN") or "").strip().rstrip("/")
 
 
+def _public_base_path() -> str:
+    raw = str(
+        os.getenv("PUBLIC_BASE_PATH")
+        or os.getenv("UX_UI_BASE_PATH")
+        or os.getenv("BASE_PATH")
+        or ""
+    ).strip()
+    if not raw or raw == "/":
+        return ""
+    return f"/{raw.strip('/')}"
+
+
+def _strip_public_base_path(path: str) -> str:
+    base_path = _public_base_path()
+    if not base_path:
+        return path
+    if path == base_path:
+        return "/"
+    if path.startswith(f"{base_path}/"):
+        return path[len(base_path):] or "/"
+    return path
+
+
+def _with_public_base_path(path: str) -> str:
+    base_path = _public_base_path()
+    if not base_path or not path.startswith("/"):
+        return path
+    return f"{base_path}{path}"
+
+
 def _now() -> float:
     return time.time()
 
@@ -259,7 +289,9 @@ def _snapshot_for_request(job: dict[str, Any], handler: BaseHTTPRequestHandler) 
     if result_url.startswith("/"):
         base_url = _request_base_url(handler)
         separator = "&" if "?" in result_url else "?"
-        payload["localResultUrl"] = f"{base_url}{result_url}{separator}apiBaseUrl={quote(base_url, safe=':/')}"
+        public_result_url = _with_public_base_path(result_url)
+        public_base_url = f"{base_url}{_public_base_path()}"
+        payload["localResultUrl"] = f"{base_url}{public_result_url}{separator}apiBaseUrl={quote(public_base_url, safe=':/')}"
     return payload
 
 
@@ -1362,7 +1394,8 @@ class AuditRequestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
-        if parsed.path == "/health":
+        request_path = _strip_public_base_path(parsed.path)
+        if request_path == "/health":
             self._send_json(
                 {
                     "status": "ok",
@@ -1371,7 +1404,7 @@ class AuditRequestHandler(BaseHTTPRequestHandler):
                 }
             )
             return
-        if parsed.path == "/api/criteria":
+        if request_path == "/api/criteria":
             try:
                 from src.gtm_audit.common import AUDIT_CRITERIA_CONFIG_PATH, current_audit_criteria_payload, load_audit_criteria_config
 
@@ -1380,7 +1413,7 @@ class AuditRequestHandler(BaseHTTPRequestHandler):
             except Exception as exc:
                 self._send_json({"error": str(exc)}, HTTPStatus.INTERNAL_SERVER_ERROR)
             return
-        if parsed.path == "/api/mobile/discovery":
+        if request_path == "/api/mobile/discovery":
             try:
                 self._send_json(_mobile_discovery_payload())
             except Exception as exc:
@@ -1402,11 +1435,11 @@ class AuditRequestHandler(BaseHTTPRequestHandler):
                     HTTPStatus.INTERNAL_SERVER_ERROR,
                 )
             return
-        if parsed.path == "/":
+        if request_path == "/":
             self._send_file(STATIC_DIR / "index.html")
             return
-        if parsed.path.startswith("/api/audits/"):
-            job_id = unquote(parsed.path.rsplit("/", 1)[-1])
+        if request_path.startswith("/api/audits/"):
+            job_id = unquote(request_path.rsplit("/", 1)[-1])
             with JOBS_LOCK:
                 job = JOBS.get(job_id)
                 payload = _snapshot_for_request(job, self) if job else None
@@ -1415,8 +1448,8 @@ class AuditRequestHandler(BaseHTTPRequestHandler):
                 return
             self._send_json(payload)
             return
-        if parsed.path.startswith("/static/"):
-            rel = unquote(parsed.path.removeprefix("/static/"))
+        if request_path.startswith("/static/"):
+            rel = unquote(request_path.removeprefix("/static/"))
             target = (STATIC_DIR / rel).resolve()
             try:
                 target.relative_to(STATIC_DIR.resolve())
@@ -1425,15 +1458,15 @@ class AuditRequestHandler(BaseHTTPRequestHandler):
                 return
             self._send_file(target)
             return
-        if parsed.path.startswith("/audits/"):
-            target = _local_audit_static_path(parsed.path)
+        if request_path.startswith("/audits/"):
+            target = _local_audit_static_path(request_path)
             if not target:
                 self.send_error(HTTPStatus.NOT_FOUND, "Audit report not found")
                 return
             self._send_file(target)
             return
-        if parsed.path.startswith("/artifacts/"):
-            rel = unquote(parsed.path.removeprefix("/artifacts/")).replace("\\", "/").lstrip("/")
+        if request_path.startswith("/artifacts/"):
+            rel = unquote(request_path.removeprefix("/artifacts/")).replace("\\", "/").lstrip("/")
             target = (ROOT_DIR / rel).resolve()
             allowed_roots = [
                 (ROOT_DIR / "shared" / "output").resolve(),
@@ -1444,8 +1477,8 @@ class AuditRequestHandler(BaseHTTPRequestHandler):
                 return
             self._send_file(target)
             return
-        if not parsed.path.startswith("/api/"):
-            rel = unquote(parsed.path.lstrip("/"))
+        if not request_path.startswith("/api/"):
+            rel = unquote(request_path.lstrip("/"))
             if rel:
                 target = (STATIC_DIR / rel).resolve()
                 try:
@@ -1460,8 +1493,9 @@ class AuditRequestHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
-        if parsed.path.startswith("/api/audits/") and parsed.path.endswith("/cancel"):
-            job_id = unquote(parsed.path.removeprefix("/api/audits/").removesuffix("/cancel").strip("/"))
+        request_path = _strip_public_base_path(parsed.path)
+        if request_path.startswith("/api/audits/") and request_path.endswith("/cancel"):
+            job_id = unquote(request_path.removeprefix("/api/audits/").removesuffix("/cancel").strip("/"))
             payload, _cancelled = _cancel_job(job_id)
             if not payload:
                 self._send_json({"error": "Audit job not found."}, HTTPStatus.NOT_FOUND)
@@ -1469,7 +1503,7 @@ class AuditRequestHandler(BaseHTTPRequestHandler):
             self._send_json(payload)
             return
 
-        if parsed.path == "/api/reports/deploy" or parsed.path.endswith("/api/reports/deploy") or parsed.path.endswith("/reports/deploy"):
+        if request_path == "/api/reports/deploy" or request_path.endswith("/api/reports/deploy") or request_path.endswith("/reports/deploy"):
             try:
                 data = self._read_json_body()
                 request_path = str(data.get("path") or "")
@@ -1484,7 +1518,7 @@ class AuditRequestHandler(BaseHTTPRequestHandler):
                 self._send_json({"error": str(exc)}, HTTPStatus.INTERNAL_SERVER_ERROR)
             return
 
-        if parsed.path == "/api/criteria":
+        if request_path == "/api/criteria":
             try:
                 from src.gtm_audit.common import save_audit_criteria_payload
 
@@ -1496,7 +1530,7 @@ class AuditRequestHandler(BaseHTTPRequestHandler):
                 self._send_json({"error": str(exc)}, HTTPStatus.INTERNAL_SERVER_ERROR)
             return
 
-        if parsed.path == "/api/criteria/reset":
+        if request_path == "/api/criteria/reset":
             try:
                 from src.gtm_audit.common import reset_audit_criteria_payload
 
@@ -1505,8 +1539,8 @@ class AuditRequestHandler(BaseHTTPRequestHandler):
                 self._send_json({"error": str(exc)}, HTTPStatus.INTERNAL_SERVER_ERROR)
             return
 
-        if parsed.path != "/api/audits":
-            if parsed.path.startswith("/api/"):
+        if request_path != "/api/audits":
+            if request_path.startswith("/api/"):
                 self._send_json({"error": "API endpoint not found."}, HTTPStatus.NOT_FOUND)
                 return
             self.send_error(HTTPStatus.NOT_FOUND, "Not found")
