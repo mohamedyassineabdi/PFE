@@ -7,6 +7,7 @@ import { Avatar } from "./avatar-1";
 import AssessmentGeneratingPage from "./assessment-generating-page";
 import AssessmentReport from "../report/AssessmentReport";
 import type { FinalReport } from "../../types/final-report";
+import { API_BASE_URL } from "../../config/api";
 
 type ChatMessage = { id: string; text: string; isUser: boolean };
 type AxisProgress = { axis: string; covered: number; total: number };
@@ -21,15 +22,32 @@ type CompanyProfileForm = {
 type Props = { onBack?: () => void };
 type OnboardingStage = "await_company_name" | "await_sector_choice" | "await_size_choice" | "assessment_active" | "completed";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000/api/v1";
 const AXIS_ORDER = ["MANAGE", "ANALYZE", "IMPROVE"];
 const normalizeAxis = (value: string | null | undefined) => (value ?? "").trim().toUpperCase();
+const createClientId = () => {
+  if (typeof globalThis.crypto !== "undefined") {
+    if (typeof globalThis.crypto.randomUUID === "function") {
+      try {
+        return globalThis.crypto.randomUUID();
+      } catch {
+        // Fall through to weaker client-side fallback when randomUUID is unavailable at runtime.
+      }
+    }
+    if (typeof globalThis.crypto.getRandomValues === "function") {
+      const bytes = new Uint8Array(16);
+      globalThis.crypto.getRandomValues(bytes);
+      const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0"));
+      return `id-${hex.join("")}`;
+    }
+  }
+  return `id-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+};
 
 export default function AssessmentChatStatic({ onBack }: Props) {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
-      id: crypto.randomUUID(),
+      id: createClientId(),
       text: "Welcome. I am Orion, EY's CX maturity assessment assistant. Please complete the company profile so I can tailor the assessment context.",
       isUser: false,
     },
@@ -101,10 +119,10 @@ export default function AssessmentChatStatic({ onBack }: Props) {
   }, [assessment]);
 
   const appendAssistant = (text: string) => {
-    setMessages((prev) => [...prev, { id: crypto.randomUUID(), text, isUser: false }]);
+    setMessages((prev) => [...prev, { id: createClientId(), text, isUser: false }]);
   };
   const appendUser = (text: string) => {
-    setMessages((prev) => [...prev, { id: crypto.randomUUID(), text, isUser: true }]);
+    setMessages((prev) => [...prev, { id: createClientId(), text, isUser: true }]);
   };
 
   const fetchAssessmentSnapshot = async (assessmentId: number): Promise<AssessmentState> => {
@@ -157,7 +175,7 @@ export default function AssessmentChatStatic({ onBack }: Props) {
     if (question) {
       setMessages([
         {
-          id: crypto.randomUUID(),
+          id: createClientId(),
           text: `Thank you. I now have your company context. Let's begin the assessment. ${question}`,
           isUser: false,
         },
@@ -281,7 +299,7 @@ export default function AssessmentChatStatic({ onBack }: Props) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Idempotency-Key": crypto.randomUUID(),
+          "Idempotency-Key": createClientId(),
         },
         body: JSON.stringify({
           answer: userText,
@@ -355,7 +373,7 @@ export default function AssessmentChatStatic({ onBack }: Props) {
     setStage("await_company_name");
     setMessages([
       {
-        id: crypto.randomUUID(),
+        id: createClientId(),
         text: "Welcome. I am Orion, EY's CX maturity assessment assistant. Please complete the company profile so I can tailor the assessment context.",
         isUser: false,
       },

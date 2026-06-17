@@ -11,21 +11,50 @@ import AdminDashboard from "./components/ui/admin-dashboard";
 import AdminAssessmentDetail from "./components/ui/admin-assessment-detail";
 import AdminAssessmentReport from "./components/ui/admin-assessment-report";
 import CustomizedTimeline from "./components/CustomizedTimeline";
+import { getCxBasePath } from "./config/api";
+
+function normalizePathname(pathname: string): string {
+  if (!pathname || pathname === "/") {
+    return "/";
+  }
+  return pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
+}
+
+function getPathname(): string {
+  return typeof window === "undefined" ? "/" : normalizePathname(window.location.pathname);
+}
+
+function stripBasePath(pathname: string, basePath: string): string {
+  const normalizedBase = normalizePathname(basePath);
+  if (!normalizedBase || normalizedBase === "/") {
+    return pathname;
+  }
+  if (pathname === normalizedBase) {
+    return "/";
+  }
+  if (pathname.startsWith(`${normalizedBase}/`)) {
+    return pathname.slice(normalizedBase.length) || "/";
+  }
+  return pathname;
+}
 
 export default function App() {
   const [showChat, setShowChat] = useState(false);
   const [adminView, setAdminView] = useState<"dashboard" | "details" | "report">("dashboard");
   const [selectedAssessmentId, setSelectedAssessmentId] = useState<number | null>(null);
-  const [pathname, setPathname] = useState(() => (typeof window === "undefined" ? "/" : window.location.pathname));
+  const [pathname, setPathname] = useState(getPathname);
+  const cxBasePath = getCxBasePath();
+  const cxHomePath = cxBasePath ? `${cxBasePath}/` : "/";
+  const appPathname = stripBasePath(pathname, cxBasePath);
 
   useEffect(() => {
-    const onPopState = () => setPathname(window.location.pathname);
+    const onPopState = () => setPathname(getPathname());
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
-  const showAdmin = pathname.startsWith("/admin");
-  const showTimelinePreview = pathname === "/timeline-preview";
+  const showAdmin = appPathname.startsWith("/admin");
+  const showTimelinePreview = appPathname === "/timeline-preview";
 
   if (showTimelinePreview) {
     return (
@@ -53,8 +82,8 @@ export default function App() {
     return (
       <AdminDashboard
         onBack={() => {
-          window.history.pushState({}, "", "/");
-          setPathname("/");
+          window.history.pushState({}, "", cxHomePath);
+          setPathname(normalizePathname(cxHomePath));
         }}
         onOpenAssessmentDetails={(assessmentId) => {
           setSelectedAssessmentId(assessmentId);
