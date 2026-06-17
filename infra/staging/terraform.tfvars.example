@@ -1,0 +1,53 @@
+aws_region  = "eu-west-3"
+app_name    = "twi-portal"
+environment = "staging"
+
+portal_domain = "portal.example.com"
+ux_ui_domain  = "ux.example.com"
+cx_domain     = "cx.example.com"
+cx_api_domain = "cx-api.example.com"
+
+route53_zone_id = "Z1234567890ABC"
+certificate_arn = "arn:aws:acm:eu-west-3:123456789012:certificate/replace-me"
+
+allowed_ingress_cidrs = ["0.0.0.0/0"]
+
+portal_api_base_url = ""
+
+portal_image_uri      = "public.ecr.aws/k8t9f9t5/twi-portal:latest"
+portal_auth_image_uri = "public.ecr.aws/k8t9f9t5/twi-portal-auth:latest"
+ux_ui_image_uri       = "public.ecr.aws/k8t9f9t5/ui-ux-auditor:latest"
+cx_frontend_image_uri = "public.ecr.aws/k8t9f9t5/twi-cx-frontend:latest"
+cx_backend_image_uri  = "public.ecr.aws/k8t9f9t5/twi-cx-backend:latest"
+
+metabase_enabled           = true
+metabase_image_uri         = "metabase/metabase:latest"
+metabase_alb_listener_port = 3000
+
+ux_enable_vercel          = true
+ux_enable_ai_review       = true
+ux_enable_figma_ai_review = false
+ux_ai_review_backend      = "ollama"
+ux_ai_review_base_url     = ""
+ux_ai_review_model        = "gpt-oss:120b-cloud"
+ux_enable_ollama_host     = true
+ux_ollama_instance_type   = "c7i-flex.large"
+ux_ollama_bootstrap_model = "gpt-oss:120b-cloud"
+ux_ollama_report_model    = "gpt-oss:120b-cloud"
+ux_ollama_ai_review_model = "gpt-oss:120b-cloud"
+ux_gtm_vision_model       = "qwen3-vl:235b-cloud"
+
+create_cx_rds    = true
+cx_db_name       = "cxportal"
+cx_db_username   = "cxportal"
+cx_db_password   = "ChangeMe123!"
+cx_app_env       = "staging"
+cx_mistral_model = "mistral-medium"
+
+seed_placeholder_secrets = true
+
+tags = {
+  Project     = "twi-portal"
+  Environment = "staging"
+  Owner       = "your-name"
+}

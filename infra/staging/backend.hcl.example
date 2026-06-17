@@ -1,0 +1,5 @@
+bucket         = "twi-portal-tfstate-123456789012"
+key            = "twi-portal/staging/terraform.tfstate"
+region         = "eu-west-3"
+dynamodb_table = "twi-portal-tfstate-locks"
+encrypt        = true
