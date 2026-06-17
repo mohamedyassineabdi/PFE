@@ -167,7 +167,9 @@ def metabase_embed_url(
     region_code: str | None = Query(default=None),
 ) -> MetabaseEmbedResponse:
     settings = get_settings()
-    if not settings.metabase_site_url or not settings.metabase_embed_secret or not settings.metabase_dashboard_id:
+    _unset = {"", "disabled", "none", "https://metabase.example.com"}
+    site_url = (settings.metabase_site_url or "").strip().lower()
+    if site_url in _unset or not settings.metabase_embed_secret or not settings.metabase_dashboard_id:
         return MetabaseEmbedResponse(enabled=False, url=None, token=None, instance_url=None)
 
     now = datetime.now(timezone.utc)

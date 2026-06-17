@@ -11,7 +11,7 @@ env/
 ENV/
 *.ps1
 *json
-
+infra/staging/secrets.tf
 # Build outputs
 dist/
 build/
@@ -24,6 +24,7 @@ CX_Chat/backend/UX_UI_AUDIT/
 .ruff_cache/
 .tox/
 .nox/
+.claude/
 .coverage
 .coverage.*
 htmlcov/
@@ -43,6 +44,10 @@ logs/
 !.env.example
 !.env.*.example
 
+# Runtime config — overwritten by Docker at startup, safe to ignore
+internal_portal/assets/JavaScript/runtime-config.js
+CX_Chat/frontend/public/runtime-config.js
+
 # Local deployment state
 .vercel/
 .netlify/
@@ -61,7 +66,7 @@ CX_Chat-main/CX_DB_FINAL.sql
 *.sqlite
 *.sqlite3
 *.db
-
+*.sql
 # Caches
 .cache/
 .parcel-cache/
@@ -89,3 +94,11 @@ temp/
 *.7z
 *.tar
 *.tar.gz
+
+.docker-deploy/
+*.txt
+*.hcl
+*.exe
+infra/staging/terraform.tfvars
+*.tfstate
+infra/staging/.terraform

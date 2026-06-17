@@ -8,10 +8,13 @@ from dotenv import load_dotenv
 
 def load_env_file() -> None:
     env_path = Path(__file__).resolve().parents[2] / ".env"
+    if not env_path.exists():
+        return
     # Keep it tolerant on Windows where .env is often saved as cp1252/latin-1.
     for encoding in ("utf-8", "cp1252", "latin-1"):
         try:
-            load_dotenv(dotenv_path=env_path, encoding=encoding, override=True)
+            # Runtime environment variables from ECS/Secrets Manager must win in AWS.
+            load_dotenv(dotenv_path=env_path, encoding=encoding, override=False)
             return
         except UnicodeDecodeError:
             continue
