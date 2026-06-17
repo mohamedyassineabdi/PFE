@@ -23,13 +23,31 @@ WebFont.load({
     const AUTH_KEY = "internalPortalAuthenticated";
     const TOKEN_KEY = "internalPortalToken";
     const USER_KEY = "internalPortalUser";
+    const ADMIN_KEY = "internalPortalAdmin";
     const form = document.getElementById("portal-auth-form");
+
+    function markPageLoaded() {
+        if (!document.body) {
+            return;
+        }
+        document.body.classList.add("loaded");
+    }
+
+    function hideLoader() {
+        const loader = document.querySelector(".page-loader");
+        if (!loader) {
+            return;
+        }
+        loader.style.opacity = "0";
+        loader.style.display = "none";
+    }
 
     function showLoaderBriefly() {
         const loader = document.querySelector(".page-loader");
         if (!loader) {
             return;
         }
+        markPageLoaded();
         loader.style.display = "flex";
         loader.style.opacity = "1";
         window.setTimeout(() => {
@@ -38,6 +56,19 @@ WebFont.load({
                 loader.style.display = "none";
             }, 450);
         }, 1200);
+    }
+
+    function applyAdminState(user) {
+        const isAdmin = Boolean(user && user.role === "admin");
+        try {
+            if (isAdmin) {
+                sessionStorage.setItem(ADMIN_KEY, "true");
+            } else {
+                sessionStorage.removeItem(ADMIN_KEY);
+            }
+        } catch (_error) {
+        }
+        document.documentElement.classList.toggle("portal-admin", isAdmin);
     }
 
     async function validateExistingSession() {
@@ -51,6 +82,7 @@ WebFont.load({
         }
         try {
             const user = await window.PortalApi.me(token);
+            applyAdminState(user);
             sessionStorage.setItem(AUTH_KEY, "true");
             sessionStorage.setItem(USER_KEY, JSON.stringify(user));
             document.documentElement.classList.add("portal-authenticated");
@@ -58,11 +90,19 @@ WebFont.load({
             sessionStorage.removeItem(AUTH_KEY);
             sessionStorage.removeItem(TOKEN_KEY);
             sessionStorage.removeItem(USER_KEY);
+            sessionStorage.removeItem(ADMIN_KEY);
             document.documentElement.classList.remove("portal-authenticated");
+            document.documentElement.classList.remove("portal-admin");
+        } finally {
+            markPageLoaded();
+            hideLoader();
         }
     }
 
     validateExistingSession();
+
+    markPageLoaded();
+    hideLoader();
 
     if (!form) {
         return;
@@ -92,10 +132,11 @@ WebFont.load({
                 sessionStorage.setItem(USER_KEY, JSON.stringify(result.user));
             } catch (_error) {
             }
-            document.documentElement.classList.add("portal-authenticated");
             if (errorMessage) {
                 errorMessage.textContent = "";
             }
+            applyAdminState(result.user);
+            document.documentElement.classList.add("portal-authenticated");
             showLoaderBriefly();
             return;
         } catch (error) {
@@ -251,20 +292,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
-var cookie3Options = {
-    "siteId": 214,
-    "additionalTracking": true,
-    "cookielessEnabled": true
+const runtimeConfig = window.__PORTAL_RUNTIME_CONFIG__ || {};
+if (runtimeConfig.enableAnalytics) {
+    var cookie3Options = {
+        "siteId": 214,
+        "additionalTracking": true,
+        "cookielessEnabled": true
+    }
+    window._paq = window._paq || [];
+    (function () {
+        var d = document,
+            g = d.createElement('script'),
+            s = d.getElementsByTagName('script')[0];
+        g.async = true;
+        g.src = 'https://cdn.cookie3.co/scripts/analytics/latest/cookie3.analytics.min.js';
+        s.parentNode.insertBefore(g, s);
+    })();
 }
-window._paq = window._paq || [];
-(function () {
-    var d = document,
-        g = d.createElement('script'),
-        s = d.getElementsByTagName('script')[0];
-    g.async = true;
-    g.src = 'https://cdn.cookie3.co/scripts/analytics/latest/cookie3.analytics.min.js';
-    s.parentNode.insertBefore(g, s);
-})();
 
 
 function hideBanner() {

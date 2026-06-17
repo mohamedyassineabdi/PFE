@@ -1,12 +1,14 @@
 window.PortalApi = (() => {
-    const API_BASE = (window.PORTAL_API_BASE || "http://127.0.0.1:8000/api/v1").replace(/\/$/, "");
+    const runtimeConfig = window.__PORTAL_RUNTIME_CONFIG__ || {};
+    const API_BASE = String(runtimeConfig.portalApiBase || window.PORTAL_API_BASE || "").trim().replace(/\/$/, "");
 
     async function request(path, options = {}) {
+        const requestUrl = API_BASE ? `${API_BASE}${path}` : path;
         const headers = {
             "Content-Type": "application/json",
             ...(options.headers || {}),
         };
-        const response = await fetch(`${API_BASE}${path}`, {
+        const response = await fetch(requestUrl, {
             ...options,
             headers,
         });

@@ -33,11 +33,30 @@
     <script type="importmap">
         { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@v0.151.3/build/three.module.min.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.151.3/examples/jsm/" } }
     </script>
+    <style>
+        .portal-admin-only { display: none !important; }
+        html.portal-admin .portal-admin-only { display: inline-flex !important; }
+    </style>
     <script>
         (() => {
             try {
                 if (sessionStorage.getItem("internalPortalAuthenticated") === "true") {
                     document.documentElement.classList.add("portal-authenticated");
+                }
+                var _isAdmin = sessionStorage.getItem("internalPortalAdmin") === "true";
+                if (!_isAdmin) {
+                    try {
+                        var _u = JSON.parse(sessionStorage.getItem("internalPortalUser") || "{}");
+                        if (_u && _u.role === "admin") { _isAdmin = true; sessionStorage.setItem("internalPortalAdmin", "true"); }
+                    } catch (_e) {}
+                }
+                var _isAuthenticated = sessionStorage.getItem("internalPortalAuthenticated") === "true";
+                if (_isAdmin || _isAuthenticated) {
+                    document.documentElement.classList.add("portal-admin");
+                    document.addEventListener("DOMContentLoaded", function() {
+                        var btn = document.getElementById("portal-admin-btn");
+                        if (btn) btn.style.display = "flex";
+                    });
                 }
             } catch (_error) {
             }
@@ -90,7 +109,7 @@
     <div data-w-id="36bff90b-9580-48dd-69d4-53229d1950b1" style="display:flex" class="page-loader">
         <div data-w-id="324e6d87-1c7b-b71a-0115-016007bcc24e" data-is-ix2-target="1" class="loader-lottie"
             data-animation-type="lottie"
-            data-src="https://cdn.prod.website-files.com/64354b8ce4872ad8cd1c7b04/6459e5817812b53e174e4b3f_loader_cgpt.json"
+            data-src="assets/Animations/loader_cgpt.json"
             data-loop="0" data-direction="1" data-autoplay="0" data-renderer="svg" data-duration="0"></div>
         <div class="loader-line-vert loader-line-left"></div>
         <div class="loader-line-vert loader-line-lcenter"></div>
@@ -454,6 +473,7 @@
                     </div>
                 </div>
             </div>
+            <a id="portal-admin-btn" href="portal-admin.html" class="portal-admin-only" style="display:none;position:absolute;right:18px;top:50%;transform:translateY(-50%);color:#e88637;font-weight:600;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;padding:5px 12px;border:1px solid rgba(232,134,55,0.6);border-radius:4px;text-decoration:none;white-space:nowrap;z-index:10;align-items:center;">Admin Panel</a>
             <div class="header-side-part" style="display:none !important;">
 
 
@@ -1185,7 +1205,7 @@
         <div class="vertical-line vertical-line--center vertical-line-solution ey-hidden-structure-line"></div>
         <div class="vertical-line vertical-line--right vertical-line-solution ey-hidden-structure-line"></div>
     </section>
-    <div id="solutions" data-w-id="5caf4f13-a5f1-ecf9-45c8-68eac933c0ac" class="solutions-section">
+    <div id="solutions" data-w-id="5caf4f13-a5f1-ecf9-45c8-68eac933c0ac" class="solutions-section" style="overflow:hidden;">
         <div class="container">
             <div data-w-id="2b780b8e-b57a-cede-5dce-26bfaf2de228" style="opacity:0"
                 class="section-heading section-heading--lg">
@@ -1237,7 +1257,7 @@
                             </div>
                             <div class="solutions-actions">
                                 <div class="solutions-actions-row">
-                                    <a scramble-link="" rel="noopener noreferrer" href="https://pfe-ux-ui-agent.vercel.app/" target="_blank"
+                                    <a scramble-link="" rel="noopener noreferrer" href="#" data-portal-link="ux-ui" target="_blank"
                                         class="link-more link-more--sm w-inline-block">
                                         <div scramble-text="">Try it Now</div><img
                                             src="https://cdn.prod.website-files.com/64354b8ce4872ad8cd1c7b04/6437b8bc549a694211710a04_arrow-right-color.svg"
@@ -1268,26 +1288,26 @@
                                     src="assets/Animations/solution-cx-agent.webp"
                                     alt="" width="315" height="315" class="solutions-image-mobile" /></div>
                             <div class="solutions-row-descr">
-                                <p class="paragraph-6">bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla bla </p>
+                                <p class="paragraph-6">AI-driven agent that evaluates your organisation's Customer Experience maturity across key dimensions, identifying gaps and delivering a prioritised roadmap for measurable CX transformation.</p>
                             </div>
                         </div>
                         <div class="solutions-col solutions-col--right">
                             <div class="solutions-feat-list">
-                                <div class="solutions-feat-item">bla bla bla bla bla</div>
-                                <div class="solutions-feat-item">bla bla bla bla bla</div>
-                                <div class="solutions-feat-item">bla bla bla bla bla</div>
-                                <div class="solutions-feat-item">bla bla bla bla bla</div>
+                                <div class="solutions-feat-item">Intelligent CX capability assessment</div>
+                                <div class="solutions-feat-item">Tailored improvement roadmap</div>
+                                <div class="solutions-feat-item">Benchmark against industry standards</div>
+                                <div class="solutions-feat-item">Actionable, data-driven insights</div>
                             </div>
                             <div class="solutions-actions">
                                 <div class="solutions-actions-row" style="flex-direction: column; align-items: flex-end; gap: 12px;">
-                                    <a scramble-link="" rel="noopener noreferrer" href="https://pfe-cx-agent.vercel.app/" target="_blank"
+                                    <a scramble-link="" rel="noopener noreferrer" href="#" data-portal-link="cx-app" target="_blank"
                                         class="link-more link-more--sm w-inline-block">
                                         <div scramble-text="">Try it Now</div><img
                                             src="https://cdn.prod.website-files.com/64354b8ce4872ad8cd1c7b04/6437b8bc549a694211710a04_arrow-right-color.svg"
                                             loading="lazy" width="38" height="38" alt=""
                                             class="link-more-icon link-more-icon--sm" />
                                     </a>
-                                    <a scramble-link="" rel="noopener noreferrer" href="https://pfe-cx-agent.vercel.app/admin" target="_blank"
+                                    <a scramble-link="" rel="noopener noreferrer" href="#" data-portal-link="cx-admin" target="_blank"
                                         class="link-more link-more--sm w-inline-block">
                                         <div scramble-text="">Admin Dashboard</div><img
                                             src="https://cdn.prod.website-files.com/64354b8ce4872ad8cd1c7b04/6437b8bc549a694211710a04_arrow-right-color.svg"
@@ -1491,6 +1511,9 @@
                     </div>
                 </div>-->
                 <div data-w-id="6f5f6c7b-3264-eea2-cb3d-2b4a30205826" class="soliutions-image-track">
+                    <div id="solutions-lottie-anim" class="solutions-image-wrap solutions-lottie-wrap"
+                        aria-hidden="true"
+                        style="height:80vh;overflow:hidden;pointer-events:none;"></div>
                     <div class="solutions-image-wrap solutions-agent-visuals" aria-hidden="true">
                         <img src="assets/Animations/solution-ux-ui-agent.webp" alt=""
                             class="solutions-agent-visual is-active" data-solution-visual="ux" />
@@ -3111,53 +3134,6 @@
                                         </div>
                                     </div>
 
-
-                                    <div class="w-slide">
-                                        <div class="team-card">
-                                            <div class="team-card-head"><img width="5" height="6" alt=""
-                                                    src="https://cdn.prod.website-files.com/64354b8ce4872ad8cd1c7b04/6436bdb39b7ca6101e1a307d_ico-indicator-light.svg"
-                                                    loading="lazy" class="team-name-icon" />
-                                                <h4 class="team-card-name">MHADHEB Sofiene</h4>
-                                            </div>
-                                            <div class="team-card-body">
-                                                <div class="team-card-avatar tca-grey"><img width="252" height="252"
-                                                        alt="Photo Advisor Ivan Liljeqvist, Founder of Moralis, and IvanOnTech Channel"
-                                                        src="assets/imgs/sofiene.png" loading="lazy" /></div>
-                                            </div>
-                                            <div class="team-card-footer">
-                                                <div class="team-card-post">Senior UX/UI & CX Designer
-                                                </div>
-                                            </div><a data-w-id="e7baf711-6ac0-661f-7203-3e712d154e05" href="#"
-                                                class="team-toggle w-inline-block">
-                                                <div class="team-toggle-text">Bio</div><img width="28" height="28"
-                                                    alt="IDO Expand Icon"
-                                                    src="https://cdn.prod.website-files.com/64354b8ce4872ad8cd1c7b04/6449229588370df9b2b29fc7_ico-expand.svg"
-                                                    loading="lazy"
-                                                    style="-webkit-transform:translate3d(0, 0, 0) scale3d(1, 1, 1) rotateX(0) rotateY(0) rotateZ(0deg) skew(0, 0);-moz-transform:translate3d(0, 0, 0) scale3d(1, 1, 1) rotateX(0) rotateY(0) rotateZ(0deg) skew(0, 0);-ms-transform:translate3d(0, 0, 0) scale3d(1, 1, 1) rotateX(0) rotateY(0) rotateZ(0deg) skew(0, 0);transform:translate3d(0, 0, 0) scale3d(1, 1, 1) rotateX(0) rotateY(0) rotateZ(0deg) skew(0, 0)"
-                                                    class="team-toggle-icon" />
-                                            </a>
-                                            <div style="height:0px" class="team-card-bio">
-                                                <div class="team-card-bio-inner">
-                                                    <div class="team-bio-text">Senior UX/UI & Customer Experience Designer with 6+ years of experience delivering customer-centric digital solutions across Europe, the Middle East, and North Africa. I’ve partnered with organizations like EY, The World Bank, and leading startups to design and scale products that drive business growth and measurable customer satisfaction.</div>
-                                                    <div class="team-socials"><a rel="noopener noreferrer nofollow"
-                                                            href="#" target="_blank"
-                                                            class="team-socials-link w-inline-block">
-                                                            <div class="team-socials-text">Linkedin</div><img width="12"
-                                                                height="12" alt=""
-                                                                src="https://cdn.prod.website-files.com/64354b8ce4872ad8cd1c7b04/64491f577f22d780663c25d1_ico-arrow.svg"
-                                                                loading="lazy" class="team-socials-ico" />
-                                                        </a><a rel="noopener noreferrer nofollow" href="#"
-                                                            target="_blank" class="team-socials-link w-inline-block">
-                                                            <!--<div class="team-socials-text">YouTube</div><img width="12"
-                                                                height="12" alt=""
-                                                                src="https://cdn.prod.website-files.com/64354b8ce4872ad8cd1c7b04/64491f577f22d780663c25d1_ico-arrow.svg"
-                                                                loading="lazy" class="team-socials-ico" />-->
-                                                        </a></div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
                                 </div>
                                 <div
                                     class="custom-slider-arrow custom-slider-arrow--prev custom-slider-arrow--top w-slider-arrow-left">
@@ -4063,8 +4039,25 @@
         crossorigin="anonymous">
         </script>
 
+    <script src="assets/JavaScript/runtime-config.js"></script>
+    <script src="assets/JavaScript/portal-links.js"></script>
     <script src="assets/JavaScript/portal-api.js"></script>
     <script src="assets/JavaScript/Script.js"></script>
+    <script src="assets/JavaScript/lottie.min.js"></script>
+    <script>
+    (function () {
+        var el = document.getElementById('solutions-lottie-anim');
+        if (!el || typeof lottie === 'undefined') return;
+        lottie.loadAnimation({
+            container: el,
+            renderer: 'svg',
+            loop: true,
+            autoplay: true,
+            path: 'assets/Animations/solutions_2025_ey_no_text/animations/main.json',
+            rendererSettings: { preserveAspectRatio: 'xMidYMid slice' }
+        });
+    })();
+    </script>
 
 
 </body>

@@ -117,8 +117,19 @@
             inviteMessage.textContent = result.email_sent
                 ? "Invitation email sent."
                 : "Invitation created, but email delivery is not configured.";
-            inviteLink.hidden = true;
-            inviteLink.textContent = "";
+            if (result.invite_url) {
+                inviteLink.hidden = false;
+                inviteLink.innerHTML = "";
+                const anchor = document.createElement("a");
+                anchor.href = result.invite_url;
+                anchor.target = "_blank";
+                anchor.rel = "noopener noreferrer";
+                anchor.textContent = result.invite_url;
+                inviteLink.appendChild(anchor);
+            } else {
+                inviteLink.hidden = true;
+                inviteLink.textContent = "";
+            }
             await loadUsers();
         } catch (error) {
             inviteMessage.textContent = error.message || "Unable to invite user.";
@@ -142,7 +153,10 @@
     });
 
     async function bootstrap() {
-        const token = getToken();
+        let token = getToken();
+        if (!token) {
+            try { token = sessionStorage.getItem("internalPortalToken"); } catch (_e) {}
+        }
         if (!token) {
             return;
         }
@@ -152,7 +166,7 @@
                 clearSession();
                 return;
             }
-            document.body.classList.add("admin-authenticated");
+            setSession(token, user);
             await loadUsers();
         } catch (_error) {
             clearSession();
