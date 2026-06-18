@@ -15,15 +15,20 @@ from app.db.models.company_size import CompanySize
 from app.db.models.maturity_level import MaturityLevel
 from app.db.models.recommendation_output import RecommendationOutput
 from app.db.models.sector import Sector
+from app.db.models.region import Region
 from app.schemas.admin_analytics import (
     AnalyticsFilterSet,
     AnalyticsOverviewCounts,
     AnalyticsOverviewResponse,
     AnalyticsWindow,
+    AssessmentsOverTimeItem,
+    AssessmentsOverTimeResponse,
     MaturityByCapabilityItem,
     MaturityByCapabilityResponse,
     RecommendationThemeItem,
     RecommendationThemesResponse,
+    RegionBreakdownItem,
+    RegionBreakdownResponse,
     SectorTrendItem,
     SectorTrendsResponse,
     TopSignalItem,
@@ -321,6 +326,60 @@ class AdminAnalyticsService:
                 )
             )
         return SectorTrendsResponse(sector_code=sector_code, series=series)
+
+    def over_time(
+        self,
+        from_date: date,
+        to_date: date,
+        sector_code: str | None,
+        company_size_code: str | None,
+    ) -> AssessmentsOverTimeResponse:
+        period_expr = func.date_trunc("month", Assessment.created_at)
+        q = (
+            self.db.query(period_expr.label("period"), func.count(Assessment.id))
+            .select_from(Assessment)
+            .join(Company, Company.id == Assessment.company_id)
+        )
+        q = self._apply_assessment_filters(
+            query=q,
+            from_date=from_date,
+            to_date=to_date,
+            status=None,
+            sector_code=sector_code,
+            company_size_code=company_size_code,
+        )
+        rows = q.group_by(period_expr).order_by(period_expr.asc()).all()
+        items: list[AssessmentsOverTimeItem] = []
+        for period_start, count in rows:
+            label = period_start.strftime("%Y-%m") if isinstance(period_start, datetime) else str(period_start)[:7]
+            items.append(AssessmentsOverTimeItem(period=label, count=int(count or 0)))
+        return AssessmentsOverTimeResponse(items=items)
+
+    def by_region(
+        self,
+        from_date: date,
+        to_date: date,
+        sector_code: str | None,
+        company_size_code: str | None,
+    ) -> RegionBreakdownResponse:
+        q = (
+            self.db.query(Region.name, func.count(Assessment.id))
+            .select_from(Assessment)
+            .join(Company, Company.id == Assessment.company_id)
+            .join(Region, Region.id == Company.region_id)
+        )
+        q = self._apply_assessment_filters(
+            query=q,
+            from_date=from_date,
+            to_date=to_date,
+            status=None,
+            sector_code=sector_code,
+            company_size_code=company_size_code,
+        )
+        rows = q.group_by(Region.name).order_by(func.count(Assessment.id).desc()).all()
+        return RegionBreakdownResponse(
+            items=[RegionBreakdownItem(region=str(name), count=int(cnt or 0)) for name, cnt in rows]
+        )
 
     def _apply_assessment_filters(
         self,

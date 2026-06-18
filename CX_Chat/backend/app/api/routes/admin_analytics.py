@@ -12,9 +12,11 @@ from app.core.config import get_settings
 from app.dependencies.db import get_db
 from app.schemas.admin_analytics import (
     AnalyticsOverviewResponse,
+    AssessmentsOverTimeResponse,
     MetabaseEmbedResponse,
     MaturityByCapabilityResponse,
     RecommendationThemesResponse,
+    RegionBreakdownResponse,
     SectorTrendsResponse,
     TopSignalsResponse,
 )
@@ -158,6 +160,42 @@ async def sector_trends(
     )
 
 
+@router.get("/over-time", response_model=AssessmentsOverTimeResponse)
+async def analytics_over_time(
+    from_date: date = Query(alias="from"),
+    to_date: date = Query(alias="to"),
+    sector_code: str | None = Query(default=None),
+    company_size_code: str | None = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+) -> AssessmentsOverTimeResponse:
+    return await db.run_sync(
+        lambda sync_db: AdminAnalyticsService(sync_db).over_time(
+            from_date=from_date,
+            to_date=to_date,
+            sector_code=sector_code,
+            company_size_code=company_size_code,
+        )
+    )
+
+
+@router.get("/by-region", response_model=RegionBreakdownResponse)
+async def analytics_by_region(
+    from_date: date = Query(alias="from"),
+    to_date: date = Query(alias="to"),
+    sector_code: str | None = Query(default=None),
+    company_size_code: str | None = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+) -> RegionBreakdownResponse:
+    return await db.run_sync(
+        lambda sync_db: AdminAnalyticsService(sync_db).by_region(
+            from_date=from_date,
+            to_date=to_date,
+            sector_code=sector_code,
+            company_size_code=company_size_code,
+        )
+    )
+
+
 @router.get("/metabase-embed", response_model=MetabaseEmbedResponse)
 def metabase_embed_url(
     from_date: date = Query(alias="from"),
@@ -195,5 +233,5 @@ def metabase_embed_url(
     }
     token = _build_metabase_jwt(payload, settings.metabase_embed_secret)
     site_url = settings.metabase_site_url.rstrip("/")
-    url = f"{site_url}/embed/dashboard/{quote(token)}#bordered=true&titled=false&theme=light"
+    url = f"{site_url}/embed/dashboard/{quote(token)}#bordered=true&titled=false&theme=night"
     return MetabaseEmbedResponse(enabled=True, url=url, token=token, instance_url=site_url)

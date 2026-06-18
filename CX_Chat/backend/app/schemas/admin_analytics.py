@@ -78,6 +78,24 @@ class SectorTrendsResponse(BaseModel):
     series: list[SectorTrendItem]
 
 
+class RegionBreakdownItem(BaseModel):
+    region: str
+    count: int
+
+
+class RegionBreakdownResponse(BaseModel):
+    items: list[RegionBreakdownItem]
+
+
+class AssessmentsOverTimeItem(BaseModel):
+    period: str
+    count: int
+
+
+class AssessmentsOverTimeResponse(BaseModel):
+    items: list[AssessmentsOverTimeItem]
+
+
 class MetabaseEmbedResponse(BaseModel):
     enabled: bool
     url: str | None = None
