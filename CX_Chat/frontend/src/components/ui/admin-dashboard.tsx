@@ -60,13 +60,6 @@ type AssessmentItem = {
   created_at: string;
 };
 type MetabaseEmbedPayload = { enabled: boolean; url?: string | null; token?: string | null; instance_url?: string | null };
-type OverviewData = {
-  counts: { assessments: number; completed: number; active: number };
-  maturity_distribution: Record<string, number>;
-  axis_avg_score_percent: Record<string, number>;
-};
-type OverTimeItem = { period: string; count: number };
-type CapabilitySignal = { capability_name: string; axis: string; count: number };
 type UiFieldMetadata = {
   label: string;
   description?: string | null;
@@ -262,11 +255,6 @@ export default function AdminDashboard({ onBack, onOpenAssessmentDetails, onOpen
   const [uiMetadata, setUiMetadata] = useState<AdminUiMetadata>(DEFAULT_ADMIN_UI_METADATA);
   const [metabaseEmbedEnabled, setMetabaseEmbedEnabled] = useState(false);
   const [metabaseEmbedUrl, setMetabaseEmbedUrl] = useState<string | null>(null);
-  const [regionBreakdown, setRegionBreakdown] = useState<{ region: string; count: number }[]>([]);
-  const [analyticsOverview, setAnalyticsOverview] = useState<OverviewData | null>(null);
-  const [overTime, setOverTime] = useState<OverTimeItem[]>([]);
-  const [painPoints, setPainPoints] = useState<CapabilitySignal[]>([]);
-  const [strengths, setStrengths] = useState<CapabilitySignal[]>([]);
 
   const [newSectorCode, setNewSectorCode] = useState("");
   const [newSectorName, setNewSectorName] = useState("");
@@ -390,28 +378,11 @@ export default function AdminDashboard({ onBack, onOpenAssessmentDetails, onOpen
   };
 
   const loadAnalytics = async () => {
-    const baseQ = new URLSearchParams({ from: fromDate, to: toDate });
-    if (sectorCode) baseQ.set("sector_code", sectorCode);
-    if (sizeCode) baseQ.set("company_size_code", sizeCode);
-    const baseQStr = baseQ.toString();
-
-    const [metabaseRes, regionRes, overviewRes, overTimeRes, painRes, strengthRes] = await Promise.all([
-      fetch(`${API_BASE_URL}/admin/analytics/metabase-embed?${analyticsQuery}`),
-      fetch(`${API_BASE_URL}/admin/analytics/by-region?${baseQStr}`),
-      fetch(`${API_BASE_URL}/admin/analytics/overview?${baseQStr}`),
-      fetch(`${API_BASE_URL}/admin/analytics/over-time?${baseQStr}`),
-      fetch(`${API_BASE_URL}/admin/analytics/top-pain-points?${baseQStr}&limit=10`),
-      fetch(`${API_BASE_URL}/admin/analytics/top-strengths?${baseQStr}&limit=10`),
-    ]);
+    const metabaseRes = await fetch(`${API_BASE_URL}/admin/analytics/metabase-embed?${analyticsQuery}`);
     if (!metabaseRes.ok) throw new Error("Failed to load analytics");
     const metabasePayload = (await metabaseRes.json()) as MetabaseEmbedPayload;
     setMetabaseEmbedEnabled(Boolean(metabasePayload.enabled));
     setMetabaseEmbedUrl(metabasePayload.url ?? null);
-    if (regionRes.ok) setRegionBreakdown(((await regionRes.json()) as { items: { region: string; count: number }[] }).items ?? []);
-    if (overviewRes.ok) setAnalyticsOverview((await overviewRes.json()) as OverviewData);
-    if (overTimeRes.ok) setOverTime(((await overTimeRes.json()) as { items: OverTimeItem[] }).items ?? []);
-    if (painRes.ok) setPainPoints(((await painRes.json()) as { items: CapabilitySignal[] }).items ?? []);
-    if (strengthRes.ok) setStrengths(((await strengthRes.json()) as { items: CapabilitySignal[] }).items ?? []);
   };
 
   const loadHistory = async () => {
@@ -744,21 +715,6 @@ export default function AdminDashboard({ onBack, onOpenAssessmentDetails, onOpen
 
           {view === "analytics" && (
             <>
-              {analyticsOverview && (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <MaturityDonut
-                    distribution={analyticsOverview.maturity_distribution}
-                    active={analyticsOverview.counts.active}
-                    completed={analyticsOverview.counts.completed}
-                  />
-                  <AxisScoreChart scores={analyticsOverview.axis_avg_score_percent} />
-                </div>
-              )}
-              {overTime.length > 0 && <OverTimeChart items={overTime} />}
-              {(painPoints.length > 0 || strengths.length > 0) && (
-                <PainStrengthChart pain={painPoints} strength={strengths} />
-              )}
-              {regionBreakdown.length > 0 && <RegionMap items={regionBreakdown} />}
               {metabaseEmbedEnabled ? (
                 <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                     {metabaseEmbedUrl ? (
@@ -2034,296 +1990,8 @@ function sortRows<T extends Record<string, unknown>>(rows: T[], key: string, dir
   });
 }
 
-const MATURITY_COLORS: Record<string, string> = {
-  Basic:       "#f59e0b",
-  Established: "#3b82f6",
-  Advanced:    "#10b981",
-  Active:      "#94a3b8",
-};
-
-function MaturityDonut({
-  distribution,
-  active,
-  completed,
-}: {
-  distribution: Record<string, number>;
-  active: number;
-  completed: number;
-}) {
-  const segments = [
-    ...Object.entries(distribution)
-      .filter(([, v]) => v > 0)
-      .map(([label, value]) => ({ label, value, color: MATURITY_COLORS[label] ?? "#64748b" })),
-    ...(active > 0 ? [{ label: "Active", value: active, color: MATURITY_COLORS.Active }] : []),
-  ];
-  const total = segments.reduce((s, d) => s + d.value, 0) || 1;
-  const R = 52;
-  const CX = 68;
-  const CY = 68;
-  const C = 2 * Math.PI * R;
-  let cum = 0;
-
-  return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="border-b border-slate-100 px-5 py-3">
-        <span className="text-sm font-semibold text-slate-700">Maturity distribution</span>
-        <span className="ml-2 text-xs text-slate-400">{completed} completed</span>
-      </div>
-      <div className="flex items-center gap-6 px-5 py-4">
-        <svg viewBox="0 0 136 136" width="136" height="136" aria-label="Maturity distribution donut chart" role="img">
-          <g transform={`rotate(-90 ${CX} ${CY})`}>
-            {segments.map((seg, i) => {
-              const dash = (seg.value / total) * C;
-              const offset = cum;
-              cum += dash;
-              return (
-                <circle
-                  key={i}
-                  cx={CX} cy={CY} r={R}
-                  fill="none"
-                  stroke={seg.color}
-                  strokeWidth="20"
-                  strokeDasharray={`${dash.toFixed(2)} ${(C - dash).toFixed(2)}`}
-                  strokeDashoffset={(-offset).toFixed(2)}
-                />
-              );
-            })}
-          </g>
-          <text x={CX} y={CY - 7} textAnchor="middle" fontSize="18" fontWeight="bold" fill="#1e293b">{total}</text>
-          <text x={CX} y={CY + 10} textAnchor="middle" fontSize="9" fill="#94a3b8">total</text>
-        </svg>
-        <div className="space-y-2">
-          {segments.map(seg => (
-            <div key={seg.label} className="flex items-center gap-2 text-xs text-slate-600">
-              <svg width="10" height="10" aria-hidden="true">
-                <rect x="0" y="0" width="10" height="10" rx="2" fill={seg.color} />
-              </svg>
-              <span className="w-20">{seg.label}</span>
-              <span className="font-medium text-slate-800">{((seg.value / total) * 100).toFixed(1)}%</span>
-              <span className="text-slate-400">({seg.value})</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AxisScoreChart({ scores }: { scores: Record<string, number> }) {
-  const entries = Object.entries(scores).sort((a, b) => b[1] - a[1]);
-  const BAR_H = 28;
-  const GAP = 12;
-  const LABEL_W = 72;
-  const BAR_MAX = 220;
-  const W = LABEL_W + BAR_MAX + 52;
-  const H = entries.length * (BAR_H + GAP) - GAP;
-
-  return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="border-b border-slate-100 px-5 py-3">
-        <span className="text-sm font-semibold text-slate-700">Average score by axis</span>
-      </div>
-      <div className="px-5 py-4">
-        <svg viewBox={`0 0 ${W} ${H + 8}`} width={W} height={H + 8} role="img" aria-label="Average score by axis">
-          {entries.map(([axis, score], i) => {
-            const y = i * (BAR_H + GAP);
-            const barW = Math.max(4, Math.round((score / 100) * BAR_MAX));
-            const hue = score >= 60 ? "#10b981" : score >= 40 ? "#3b82f6" : "#f59e0b";
-            return (
-              <g key={axis}>
-                <text x={0} y={y + BAR_H / 2 + 5} fontSize={12} fill="#475569" fontFamily="inherit">{axis}</text>
-                <rect x={LABEL_W} y={y + 4} width={BAR_MAX} height={BAR_H - 8} rx={4} fill="#f1f5f9" />
-                <rect x={LABEL_W} y={y + 4} width={barW} height={BAR_H - 8} rx={4} fill={hue} opacity="0.85" />
-                <text x={LABEL_W + barW + 6} y={y + BAR_H / 2 + 5} fontSize={12} fill="#64748b" fontFamily="inherit">
-                  {score.toFixed(0)}%
-                </text>
-              </g>
-            );
-          })}
-        </svg>
-      </div>
-    </div>
-  );
-}
-
-function OverTimeChart({ items }: { items: OverTimeItem[] }) {
-  if (items.length === 0) return null;
-  const W = 560;
-  const H = 170;
-  const PAD = { top: 12, right: 16, bottom: 28, left: 36 };
-  const cW = W - PAD.left - PAD.right;
-  const cH = H - PAD.top - PAD.bottom;
-  const maxC = Math.max(...items.map(d => d.count), 1);
-  const xStep = items.length > 1 ? cW / (items.length - 1) : cW;
-  const pts = items.map((d, i) => ({
-    x: PAD.left + i * xStep,
-    y: PAD.top + cH - (d.count / maxC) * cH,
-    count: d.count,
-    label: d.period,
-  }));
-  const linePath = pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
-  const areaPath = pts.length > 0
-    ? `${linePath} L ${pts[pts.length - 1].x.toFixed(1)} ${(PAD.top + cH).toFixed(1)} L ${pts[0].x.toFixed(1)} ${(PAD.top + cH).toFixed(1)} Z`
-    : "";
-
-  return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="border-b border-slate-100 px-5 py-3">
-        <span className="text-sm font-semibold text-slate-700">Assessments over time</span>
-      </div>
-      <div className="overflow-x-auto px-5 py-4">
-        <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} role="img" aria-label="Assessments over time">
-          {[0, 0.25, 0.5, 0.75, 1].map(frac => {
-            const y = PAD.top + cH - frac * cH;
-            return (
-              <g key={frac}>
-                <line x1={PAD.left} y1={y} x2={PAD.left + cW} y2={y} stroke="#f1f5f9" strokeWidth="1" />
-                <text x={PAD.left - 4} y={y + 4} fontSize="9" fill="#94a3b8" textAnchor="end">
-                  {Math.round(frac * maxC)}
-                </text>
-              </g>
-            );
-          })}
-          <line x1={PAD.left} y1={PAD.top} x2={PAD.left} y2={PAD.top + cH} stroke="#e2e8f0" strokeWidth="1" />
-          <line x1={PAD.left} y1={PAD.top + cH} x2={PAD.left + cW} y2={PAD.top + cH} stroke="#e2e8f0" strokeWidth="1" />
-          {areaPath && <path d={areaPath} fill="#3b82f6" fillOpacity="0.07" />}
-          <path d={linePath} fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-          {pts.map((p, i) => (
-            <g key={i}>
-              <circle cx={p.x} cy={p.y} r="4" fill="#3b82f6" stroke="#fff" strokeWidth="2" />
-              <text x={p.x} y={PAD.top + cH + 16} fontSize="9" fill="#94a3b8" textAnchor="middle">
-                {p.label.length === 7 ? p.label.slice(5) : p.label}
-              </text>
-              <text x={p.x} y={p.y - 8} fontSize="9" fill="#3b82f6" textAnchor="middle">{p.count}</text>
-            </g>
-          ))}
-        </svg>
-      </div>
-    </div>
-  );
-}
-
-function PainStrengthChart({ pain, strength }: { pain: CapabilitySignal[]; strength: CapabilitySignal[] }) {
-  const painMap = Object.fromEntries(pain.map(p => [p.capability_name, p.count]));
-  const strengthMap = Object.fromEntries(strength.map(s => [s.capability_name, s.count]));
-  const names = Array.from(new Set([...pain.map(p => p.capability_name), ...strength.map(s => s.capability_name)]));
-  const items = names
-    .map(name => ({ name, pain: painMap[name] ?? 0, strength: strengthMap[name] ?? 0 }))
-    .sort((a, b) => b.pain - a.pain);
-  const maxVal = Math.max(...items.flatMap(d => [d.pain, d.strength]), 1);
-  const BAR = 10;
-  const ROW = 30;
-  const LABEL_W = 148;
-  const BAR_MAX = 260;
-  const W = LABEL_W + BAR_MAX + 48;
-  const H = items.length * ROW;
-
-  return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex items-center gap-6 border-b border-slate-100 px-5 py-3">
-        <span className="text-sm font-semibold text-slate-700">Pain vs strength by capability</span>
-        <div className="flex gap-4 text-xs text-slate-500">
-          <span className="flex items-center gap-1">
-            <svg width="10" height="10" aria-hidden="true"><rect x="0" y="0" width="10" height="10" rx="2" fill="#ef4444" /></svg>
-            Pain
-          </span>
-          <span className="flex items-center gap-1">
-            <svg width="10" height="10" aria-hidden="true"><rect x="0" y="0" width="10" height="10" rx="2" fill="#10b981" /></svg>
-            Strength
-          </span>
-        </div>
-      </div>
-      <div className="overflow-x-auto px-5 py-4">
-        <svg viewBox={`0 0 ${W} ${H + 4}`} width={W} height={H + 4} role="img" aria-label="Pain vs strength by capability">
-          {items.map((item, i) => {
-            const y = i * ROW;
-            const painW = Math.max(2, Math.round((item.pain / maxVal) * BAR_MAX));
-            const strW = Math.max(2, Math.round((item.strength / maxVal) * BAR_MAX));
-            const label = item.name.length > 22 ? item.name.slice(0, 21) + "…" : item.name;
-            return (
-              <g key={item.name}>
-                <text x={0} y={y + BAR + 2} fontSize={10} fill="#475569" fontFamily="inherit">{label}</text>
-                <rect x={LABEL_W} y={y} width={painW} height={BAR} rx={2} fill="#ef4444" opacity="0.82" />
-                <text x={LABEL_W + painW + 4} y={y + BAR - 1} fontSize={9} fill="#ef4444">{item.pain}</text>
-                <rect x={LABEL_W} y={y + BAR + 4} width={strW} height={BAR} rx={2} fill="#10b981" opacity="0.82" />
-                <text x={LABEL_W + strW + 4} y={y + BAR * 2 + 3} fontSize={9} fill="#10b981">{item.strength}</text>
-              </g>
-            );
-          })}
-        </svg>
-      </div>
-    </div>
-  );
-}
-
 function sortable(headers: string[], sortKey: string, _sortDir: SortDir) {
   return headers;
   return headers.map((h, i) => (i < headers.length - 1 ? `${h}${sortKey ? " ↕" : ""}` : h)).map((v, idx, arr) => (idx === arr.length - 1 ? v.replace(" ↕", "") : v));
-}
-
-const REGION_COLORS: Record<string, string> = {
-  "Africa":        "#f59e0b",
-  "Asia":          "#3b82f6",
-  "Europe":        "#8b5cf6",
-  "North America": "#10b981",
-  "South America": "#ec4899",
-  "Oceania":       "#06b6d4",
-  "Antarctica":    "#94a3b8",
-};
-
-function RegionMap({ items }: { items: { region: string; count: number }[] }) {
-  const total = items.reduce((s, r) => s + r.count, 0) || 1;
-  const max = Math.max(...items.map((r) => r.count), 1);
-
-  const W = 560;
-  const BAR_H = 28;
-  const GAP = 8;
-  const LABEL_W = 130;
-  const COUNT_W = 36;
-  const BAR_MAX_W = W - LABEL_W - COUNT_W - 16;
-
-  return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="border-b border-slate-100 px-5 py-3">
-        <span className="text-sm font-semibold text-slate-700">Assessments by region</span>
-        <span className="ml-2 text-xs text-slate-400">{total} total</span>
-      </div>
-      <div className="overflow-x-auto px-5 py-4">
-        <svg
-          viewBox={`0 0 ${W} ${items.length * (BAR_H + GAP) - GAP + 8}`}
-          width={W}
-          height={items.length * (BAR_H + GAP) - GAP + 8}
-          role="img"
-          aria-label="Assessments by region bar chart"
-        >
-          {items.map((item, i) => {
-            const y = i * (BAR_H + GAP);
-            const barW = Math.max(4, Math.round((item.count / max) * BAR_MAX_W));
-            const fill = REGION_COLORS[item.region] ?? "#64748b";
-            const pct = Math.round((item.count / total) * 100);
-            return (
-              <g key={item.region}>
-                <text x={0} y={y + BAR_H / 2 + 5} fontSize={12} fill="#475569" fontFamily="inherit">
-                  {item.region}
-                </text>
-                <rect
-                  x={LABEL_W}
-                  y={y + 2}
-                  width={barW}
-                  height={BAR_H - 4}
-                  rx={4}
-                  fill={fill}
-                  opacity={0.85}
-                />
-                <text x={LABEL_W + barW + 6} y={y + BAR_H / 2 + 5} fontSize={12} fill="#64748b" fontFamily="inherit">
-                  {item.count} <tspan fill="#94a3b8">({pct}%)</tspan>
-                </text>
-              </g>
-            );
-          })}
-        </svg>
-      </div>
-    </div>
-  );
 }
 
