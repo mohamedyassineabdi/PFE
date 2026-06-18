@@ -1,4 +1,4 @@
-bucket         = "twi-portal-tfstate-123456789012"
+bucket         = "twi-portal-1234bjlkm5556012"
 key            = "twi-portal/staging/terraform.tfstate"
 region         = "eu-west-3"
 dynamodb_table = "twi-portal-tfstate-locks"

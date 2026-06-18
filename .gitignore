@@ -102,3 +102,4 @@ temp/
 infra/staging/terraform.tfvars
 *.tfstate
 infra/staging/.terraform
+infra/staging/iam.tf

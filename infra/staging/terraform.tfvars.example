@@ -14,14 +14,14 @@ allowed_ingress_cidrs = ["0.0.0.0/0"]
 
 portal_api_base_url = ""
 
-portal_image_uri      = "public.ecr.aws/k8t9f9t5/twi-portal:latest"
-portal_auth_image_uri = "public.ecr.aws/k8t9f9t5/twi-portal-auth:latest"
-ux_ui_image_uri       = "public.ecr.aws/k8t9f9t5/ui-ux-auditor:latest"
-cx_frontend_image_uri = "public.ecr.aws/k8t9f9t5/twi-cx-frontend:latest"
-cx_backend_image_uri  = "public.ecr.aws/k8t9f9t5/twi-cx-backend:latest"
+portal_image_uri      = "public.ecr.aws/hbjhbu5/twi-portal:latest"
+portal_auth_image_uri = "public.ecr.aws/kfgvgv79t5/twi-portal-auth:latest"
+ux_ui_image_uri       = "public.ecr.aws/uuvjyio5/ui-ux-auditor:latest"
+cx_frontend_image_uri = "public.ecr.aws/ygygiy86/twi-cx-frontend:latest"
+cx_backend_image_uri  = "public.ecr.aws/uyyg86gu5/twi-cx-backend:latest"
 
 metabase_enabled           = true
-metabase_image_uri         = "metabase/metabase:latest"
+metabase_image_uri         = "metabase/metabase:v0.47.6"
 metabase_alb_listener_port = 3000
 
 ux_enable_vercel          = true
