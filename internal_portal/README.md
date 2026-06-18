@@ -1,4 +1,4 @@
-# 🚀 RobotAI - 3D Animated Website Template  
+#  RobotAI - 3D Animated Website Template  
 
 ![RobotAI Preview](https://github.com/AHMAD-JX/RobotAI-3DAnimated-Website-Template/blob/350daf459a4cec9d75296783b750b5129895c1db/assets/imgs/website.png)  
 
@@ -14,7 +14,7 @@
  **Cross-Browser Compatible** – Works on Chrome, Firefox, Edge, and Safari.  
  **Easy to Customize** – Clean and well-structured code for effortless modifications.  
 
-## 🛠️ Technologies Used  
+##  Technologies Used  
 
 - **HTML5** – Semantic and well-structured markup.  
 - **CSS3 (SCSS)** – Advanced styling with preprocessor support.  
@@ -23,7 +23,7 @@
 - **Three.js** – For creating and rendering advanced 3D elements.  
 - **Responsive Design** – Using Flexbox & Grid for a seamless layout on all devices.  
 
-## 📸 Screenshots  
+##  Screenshots  
 
 ![RobotAI Preview](https://github.com/AHMAD-JX/RobotAI-3DAnimated-Website-Template/blob/350daf459a4cec9d75296783b750b5129895c1db/assets/imgs/website1.png) 
 

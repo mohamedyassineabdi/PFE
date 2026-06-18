@@ -1332,6 +1332,36 @@ body.korean-language .korean-language.korean-language-flex {
 
 /* Solutions additional animation */
 
+.solutions-section {
+    contain: paint;
+    isolation: isolate;
+}
+
+.solutions-list {
+    overflow: hidden;
+}
+
+.soliutions-image-track {
+    max-height: 100%;
+    overflow: hidden;
+    z-index: 0;
+}
+
+.solutions-row {
+    position: relative;
+    z-index: 1;
+}
+
+.solutions-lottie-wrap {
+    max-height: 72vh;
+}
+
+.team-section {
+    position: relative;
+    z-index: 3;
+    background-color: #0a090f;
+}
+
 .solutions-row .solutions-actions {
     transition: opacity .3s;
 }

@@ -43,7 +43,7 @@
     const mappings = {
         "ux-ui": normalizeUrl(config.uxUiUrl, "/ux-ui"),
         "cx-app": normalizeUrl(config.cxUrl, "/cx"),
-        "cx-admin": normalizeUrl(config.cxAdminUrl, "/admin/")
+        "cx-admin": normalizeUrl(config.cxAdminUrl, "/cx/admin/")
     };
 
     document.querySelectorAll("[data-portal-link]").forEach((anchor) => {
