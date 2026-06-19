@@ -575,9 +575,11 @@ resource "aws_ecs_task_definition" "metabase" {
 
   container_definitions = jsonencode([
     {
-      name      = "metabase"
-      image     = var.metabase_image_uri
-      essential = true
+      name       = "metabase"
+      image      = var.metabase_image_uri
+      essential  = true
+      entryPoint = ["sh", "-c"]
+      command    = ["rm -f /metabase-data/metabase.db.mv.db.lock 2>/dev/null; exec /app/run_metabase.sh"]
       portMappings = [
         {
           containerPort = var.metabase_container_port
@@ -603,12 +605,8 @@ resource "aws_ecs_task_definition" "metabase" {
           value = "/metabase-data/metabase.db"
         },
         {
-          name  = "MB_ENABLE_EMBEDDING_STATIC"
+          name  = "MB_ENABLE_EMBEDDING"
           value = "true"
-        },
-        {
-          name  = "MB_SHOW_STATIC_EMBED_TERMS"
-          value = "false"
         }
       ]
       secrets = [
@@ -617,6 +615,13 @@ resource "aws_ecs_task_definition" "metabase" {
           valueFrom = aws_secretsmanager_secret.cx_metabase_embed_secret.arn
         }
       ]
+      healthCheck = {
+        command     = ["CMD-SHELL", "curl -sf http://localhost:${var.metabase_container_port}/api/health || exit 1"]
+        interval    = 30
+        timeout     = 10
+        retries     = 3
+        startPeriod = 120
+      }
       logConfiguration = {
         logDriver = "awslogs"
         options = {
