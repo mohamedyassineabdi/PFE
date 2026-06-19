@@ -683,7 +683,7 @@ export default function AdminDashboard({ onBack, onOpenAssessmentDetails, onOpen
           <h1 className="text-3xl font-semibold tracking-[-0.03em]">{NAV_ITEMS.find((item) => item.key === view)?.label}</h1>
           <p className="mt-2 text-sm text-[#6B7280]">Manage the business guidance the LLM uses for questions, scoring context, and final recommendations.</p>
         </header>
-        <main className="space-y-4 px-6 py-8 md:px-8">
+        <main className={`space-y-4 px-6 py-8 md:px-8 ${view === "analytics" ? "bg-[#06131a]" : ""}`}>
           {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
           {loading ? <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">Loading...</div> : null}
 
@@ -716,15 +716,16 @@ export default function AdminDashboard({ onBack, onOpenAssessmentDetails, onOpen
           {view === "analytics" && (
             <>
               {metabaseEmbedEnabled ? (
-                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div className="w-full overflow-hidden rounded-xl border border-[#1f3340] bg-[#06131a] shadow-sm">
                     {metabaseEmbedUrl ? (
                       <iframe
                         title="Metabase analytics dashboard"
                         src={metabaseEmbedUrl}
-                        className="w-full bg-white h-[calc(100vh-210px)] min-h-[760px]"
+                        className="block h-[calc(100vh-210px)] min-h-[760px] w-full border-0 bg-[#06131a]"
+                        allowFullScreen
                       />
                     ) : (
-                      <div className="px-4 py-8 text-sm text-slate-500">Loading Metabase charts...</div>
+                      <div className="px-4 py-8 text-sm text-slate-300">Loading Metabase charts...</div>
                     )}
                 </div>
               ) : (
