@@ -1,6 +1,8 @@
 import base64
 import hashlib
 import hmac
+import html
+import logging
 import os
 import re
 import secrets
@@ -21,6 +23,7 @@ from pydantic import BaseModel
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 PASSWORD_MIN_LENGTH = 8
 PBKDF2_ITERATIONS = 310_000
+logger = logging.getLogger("portal-auth")
 
 
 def utc_now() -> datetime:
@@ -89,6 +92,9 @@ class Settings:
     bootstrap_admin_email: str
     bootstrap_admin_password: str
     allowed_origins: list[str]
+    ses_region: str
+    ses_from_email: str
+    ses_configuration_set: str
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -107,6 +113,9 @@ class Settings:
             bootstrap_admin_email=bootstrap_email,
             bootstrap_admin_password=bootstrap_password,
             allowed_origins=allowed_origins,
+            ses_region=os.getenv("PORTAL_AUTH_SES_REGION", os.getenv("AWS_REGION", "")).strip(),
+            ses_from_email=os.getenv("PORTAL_AUTH_SES_FROM_EMAIL", "").strip(),
+            ses_configuration_set=os.getenv("PORTAL_AUTH_SES_CONFIGURATION_SET", "").strip(),
         )
 
 
@@ -370,6 +379,53 @@ def build_invite_url(token: str) -> str:
     return relative_path
 
 
+def send_invite_email(to_email: str, invite_url: str) -> bool:
+    if not settings.ses_from_email:
+        return False
+
+    try:
+        import boto3
+    except Exception as exc:
+        logger.warning("SES invite email skipped because boto3 is unavailable: %s", exc)
+        return False
+
+    subject = "Your TWI Portal account is ready"
+    text_body = (
+        "Hello,\n\n"
+        "An administrator invited you to TWI Portal.\n\n"
+        f"Create your password here: {invite_url}\n\n"
+        f"This invitation expires in {settings.invite_ttl_hours} hours."
+    )
+    escaped_url = html.escape(invite_url, quote=True)
+    html_body = (
+        "<p>Hello,</p>"
+        "<p>An administrator invited you to TWI Portal.</p>"
+        f'<p><a href="{escaped_url}">Create your password</a></p>'
+        f"<p>This invitation expires in {settings.invite_ttl_hours} hours.</p>"
+    )
+    message = {
+        "Source": settings.ses_from_email,
+        "Destination": {"ToAddresses": [to_email]},
+        "Message": {
+            "Subject": {"Data": subject, "Charset": "UTF-8"},
+            "Body": {
+                "Text": {"Data": text_body, "Charset": "UTF-8"},
+                "Html": {"Data": html_body, "Charset": "UTF-8"},
+            },
+        },
+    }
+    if settings.ses_configuration_set:
+        message["ConfigurationSetName"] = settings.ses_configuration_set
+
+    try:
+        client_kwargs = {"region_name": settings.ses_region} if settings.ses_region else {}
+        boto3.client("ses", **client_kwargs).send_email(**message)
+        return True
+    except Exception as exc:
+        logger.warning("SES invite email failed for %s: %s", to_email, exc)
+        return False
+
+
 def get_bearer_token(authorization: str | None = Header(default=None)) -> str:
     if not authorization:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required.")
@@ -435,10 +491,11 @@ def list_users(_admin: sqlite3.Row = Depends(require_admin)) -> dict:
 def invite_user(payload: InviteUserRequest, _admin: sqlite3.Row = Depends(require_admin)) -> dict:
     email = normalize_email(payload.email)
     user, token = database.upsert_invited_user(email, settings.invite_ttl_hours)
+    invite_url = build_invite_url(token)
     return {
         "email": user["email"],
-        "email_sent": False,
-        "invite_url": build_invite_url(token),
+        "email_sent": send_invite_email(user["email"], invite_url),
+        "invite_url": invite_url,
         "user": user_payload(user),
     }
 

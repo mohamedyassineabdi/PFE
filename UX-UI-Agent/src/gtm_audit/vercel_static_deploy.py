@@ -17,6 +17,21 @@ DEFAULT_REPORT_DIR = GENERATED_DIR / "gtm-report"
 DEFAULT_STATIC_DIR = GENERATED_DIR / "vercel-gtm-report"
 HISTORY_STATIC_DIR = GENERATED_DIR / "vercel-audit-history"
 LOCAL_REF_RE = re.compile(r'(?P<attr>src|href)="(?P<href>[^"]+)"')
+STATIC_VERCEL_CONFIG = {
+    "version": 2,
+    "builds": [
+        {
+            "src": "**/*",
+            "use": "@vercel/static",
+        }
+    ],
+    "routes": [
+        {
+            "src": "/(.*)",
+            "dest": "/$1",
+        }
+    ],
+}
 
 
 def _inside(path: Path, parent: Path) -> bool:
@@ -123,19 +138,30 @@ def _write_history_index(history_dir: Path, audit_slug: str) -> None:
     (history_dir / "index.html").write_text(html, encoding="utf-8")
 
 
+def _write_static_vercel_config(static_dir: Path) -> None:
+    (static_dir / "vercel.json").write_text(
+        json.dumps(STATIC_VERCEL_CONFIG, indent=2),
+        encoding="utf-8",
+    )
+
+
 def package_report_for_vercel(report_dir: Path, static_dir: Path, audit_slug: str = "") -> Path:
     static_dir = static_dir if static_dir.is_absolute() else ROOT_DIR / static_dir
     slug = _safe_slug(audit_slug) if audit_slug else ""
     if not slug:
-        return _copy_report_with_assets(report_dir, static_dir)
+        output_index = _copy_report_with_assets(report_dir, static_dir)
+        _write_static_vercel_config(static_dir)
+        return output_index
 
     history_dir = HISTORY_STATIC_DIR
     current_report_dir = history_dir / "audits" / slug
     output_index = _copy_report_with_assets(report_dir, current_report_dir)
     _write_history_index(history_dir, slug)
+    _write_static_vercel_config(history_dir)
 
     _safe_clear_dir(static_dir)
     shutil.copytree(history_dir, static_dir, dirs_exist_ok=True)
+    _write_static_vercel_config(static_dir)
     return static_dir / "audits" / slug / "index.html"
 
 
@@ -173,15 +199,26 @@ def _env(name: str) -> str:
     return os.getenv(name, "").strip()
 
 
+def _usable_vercel_scope(value: str) -> str:
+    scope = value.strip()
+    if scope.lower() in {"", "replace_me", "changeme", "change_me", "placeholder"}:
+        return ""
+    return scope
+
+
 def _ensure_vercel_project_link(static_dir: Path) -> None:
     org_id = _env("VERCEL_ORG_ID")
     project_id = _env("VERCEL_PROJECT_ID")
-    if not org_id or not project_id:
-        return
-
     vercel_dir = static_dir / ".vercel"
     vercel_dir.mkdir(parents=True, exist_ok=True)
     project_json = vercel_dir / "project.json"
+    source_project_json = ROOT_DIR / ".vercel" / "project.json"
+
+    if not org_id or not project_id:
+        if source_project_json.exists():
+            shutil.copy2(source_project_json, project_json)
+        return
+
     project_json.write_text(
         json.dumps({"orgId": org_id, "projectId": project_id}, indent=2),
         encoding="utf-8",
@@ -191,6 +228,7 @@ def _ensure_vercel_project_link(static_dir: Path) -> None:
 def deploy_to_vercel(static_dir: Path, *, production: bool = True, public_path: str = "", prefer_alias: bool = False) -> str:
     executable = _vercel_executable()
     static_dir = static_dir if static_dir.is_absolute() else ROOT_DIR / static_dir
+    _write_static_vercel_config(static_dir)
     _ensure_vercel_project_link(static_dir)
 
     command = [executable, "deploy", ".", "--yes"]
@@ -199,8 +237,9 @@ def deploy_to_vercel(static_dir: Path, *, production: bool = True, public_path: 
     vercel_token = _env("VERCEL_TOKEN")
     if vercel_token:
         command.extend(["--token", vercel_token])
-    vercel_scope = _env("VERCEL_SCOPE")
-    if vercel_scope:
+    vercel_scope = _usable_vercel_scope(_env("VERCEL_SCOPE"))
+    linked_project = (static_dir / ".vercel" / "project.json").exists()
+    if vercel_scope and not linked_project:
         command.extend(["--scope", vercel_scope])
     completed = subprocess.run(
         command,

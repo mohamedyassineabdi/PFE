@@ -300,7 +300,7 @@ def render_local_publish_panel() -> str:
       </div>
       <div class="local-publish-actions">
         <button class="publish-button" type="button" data-deploy-edited-report>Deploy final audit to Vercel</button>
-        <span class="publish-status" data-deploy-status>Ready to publish reviewed edits to Vercel.</span>
+        <span class="publish-status" data-deploy-status>Local edits are not published until you deploy.</span>
       </div>
     </section>
     """
@@ -312,8 +312,7 @@ def render_local_edit_script() -> str:
   (() => {
     const localHosts = new Set(["127.0.0.1", "localhost", "::1"]);
     const panel = document.querySelector("[data-local-publish-panel]");
-    const currentPath = window.location.pathname || "";
-    const isAuditPath = currentPath.startsWith("/audits/") || currentPath.startsWith("/ux-ui/audits/");
+    const isAuditPath = window.location.pathname.startsWith("/audits/");
     const isKnownStaticDeployment = /(?:^|\\.)vercel\\.app$/i.test(window.location.hostname) || /(?:^|\\.)vercel\\.com$/i.test(window.location.hostname);
     const isLocalEditable = !isKnownStaticDeployment && (isAuditPath || localHosts.has(window.location.hostname) || window.location.protocol === "file:");
     const canDeployFromHere = isAuditPath && !isKnownStaticDeployment && /^https?:$/.test(window.location.protocol);
@@ -335,7 +334,128 @@ def render_local_edit_script() -> str:
       });
     }
 
+    function recommendationTemplate() {
+      return `
+        <details class="reco-card priority-custom" data-recommendation-card open>
+          <summary>
+            <span class="reco-orb">01</span>
+            <span class="reco-summary-copy">
+              <span class="reco-badge" data-reco-editable="priority">Action</span>
+              <strong data-reco-editable="title">New recommendation</strong>
+            </span>
+            <span class="reco-actions" data-local-edit-control>
+              <button class="edit-chip reco-edit-button" type="button" data-reco-action="edit" aria-pressed="false">Edit</button>
+              <button class="edit-chip reco-edit-button" type="button" data-reco-action="delete">Delete</button>
+            </span>
+            <span class="reco-toggle" aria-hidden="true">+</span>
+          </summary>
+          <div class="reco-body">
+            <p data-reco-editable="description">Describe the recommendation and the expected user experience improvement.</p>
+            <p class="reco-impact"><span data-reco-editable="impact">Expected impact for the product or conversion flow.</span></p>
+            <span class="reco-axis" data-reco-editable="axis">Relevant UX/UI axis</span>
+          </div>
+        </details>
+      `;
+    }
+
+    function createRecommendationCard() {
+      const template = document.createElement("template");
+      template.innerHTML = recommendationTemplate().trim();
+      return template.content.firstElementChild;
+    }
+
+    function renumberRecommendations(list = document.querySelector("[data-reco-list]")) {
+      if (!list) return;
+      list.querySelectorAll("[data-recommendation-card]").forEach((card, index) => {
+        const number = String(index + 1).padStart(2, "0");
+        card.dataset.recoIndex = String(index + 1);
+        const orb = card.querySelector(".reco-orb");
+        if (orb) orb.textContent = number;
+      });
+    }
+
+    function setRecommendationEditing(card, enabled) {
+      if (!card) return;
+      card.querySelectorAll("[data-reco-editable]").forEach((field) => {
+        field.contentEditable = enabled ? "true" : "false";
+      });
+      const editButton = card.querySelector('[data-reco-action="edit"]');
+      if (editButton) {
+        editButton.setAttribute("aria-pressed", enabled ? "true" : "false");
+        editButton.textContent = enabled ? "Done" : "Edit";
+      }
+      if (enabled && "open" in card) card.open = true;
+      if (enabled) {
+        const firstField = card.querySelector("[data-reco-editable]");
+        if (firstField) firstField.focus();
+      }
+    }
+
+    function ensureRecommendationEmptyState(list) {
+      if (!list) return;
+      const hasCards = Boolean(list.querySelector("[data-recommendation-card]"));
+      const empty = list.querySelector("[data-reco-empty]");
+      if (hasCards && empty) {
+        empty.remove();
+        return;
+      }
+      if (!hasCards && !empty) {
+        const message = document.createElement("p");
+        message.className = "empty";
+        message.dataset.recoEmpty = "";
+        message.textContent = "No prioritized recommendation was generated yet.";
+        list.appendChild(message);
+      }
+    }
+
+    function addDeployedBookingSection(clone) {
+      const template = clone.querySelector("[data-deployed-booking-template]");
+      if (!template) return;
+      const footer = clone.querySelector("footer.footer");
+      const parent = footer ? footer.parentNode : clone.querySelector("body");
+      if (!parent) {
+        template.remove();
+        return;
+      }
+      const section = template.content ? template.content.cloneNode(true) : null;
+      if (section) {
+        parent.insertBefore(section, footer || null);
+      }
+      template.remove();
+    }
+
     document.addEventListener("click", (event) => {
+      const recoAction = event.target.closest("[data-reco-action]");
+      if (recoAction) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!isLocalEditable) return;
+        const list = document.querySelector("[data-reco-list]");
+        const card = recoAction.closest("[data-recommendation-card]");
+        const action = recoAction.dataset.recoAction;
+        if (action === "add" && list) {
+          const nextCard = createRecommendationCard();
+          const empty = list.querySelector("[data-reco-empty]");
+          if (empty) empty.remove();
+          list.appendChild(nextCard);
+          renumberRecommendations(list);
+          setRecommendationEditing(nextCard, true);
+          return;
+        }
+        if (action === "edit" && card) {
+          setRecommendationEditing(card, recoAction.getAttribute("aria-pressed") !== "true");
+          return;
+        }
+        if (action === "delete" && card) {
+          const wasEditing = card.querySelector('[data-reco-action="edit"]')?.getAttribute("aria-pressed") === "true";
+          if (wasEditing) setRecommendationEditing(card, false);
+          card.remove();
+          ensureRecommendationEmptyState(list);
+          renumberRecommendations(list);
+          return;
+        }
+      }
+
       const action = event.target.closest("[data-edit-action]");
       if (!action) return;
       const issueId = action.dataset.issueId || "";
@@ -404,28 +524,19 @@ def render_local_edit_script() -> str:
 
     updateOverallScore();
 
-    function addDeployedBookingSection(clone) {
-      const template = clone.querySelector("[data-deployed-booking-template]");
-      if (!template) return;
-      const footer = clone.querySelector("footer.footer");
-      const parent = footer ? footer.parentNode : clone.querySelector("body");
-      if (!parent) {
-        template.remove();
-        return;
-      }
-      const section = template.content ? template.content.cloneNode(true) : null;
-      if (section) {
-        parent.insertBefore(section, footer || null);
-      }
-      template.remove();
-    }
-
     function cleanCloneForDeployment() {
       const clone = document.documentElement.cloneNode(true);
       addDeployedBookingSection(clone);
       clone.querySelectorAll("[contenteditable]").forEach((node) => node.removeAttribute("contenteditable"));
       clone.querySelectorAll("[data-editable-field]").forEach((node) => node.removeAttribute("data-editable-field"));
       clone.querySelectorAll("[data-editable-image]").forEach((node) => node.removeAttribute("data-editable-image"));
+      clone.querySelectorAll("[data-reco-editable]").forEach((node) => node.removeAttribute("data-reco-editable"));
+      clone.querySelectorAll("[data-recommendation-card]").forEach((node) => {
+        node.removeAttribute("data-recommendation-card");
+        node.removeAttribute("data-reco-index");
+      });
+      clone.querySelectorAll("[data-reco-list]").forEach((node) => node.removeAttribute("data-reco-list"));
+      clone.querySelectorAll("[data-reco-empty]").forEach((node) => node.removeAttribute("data-reco-empty"));
       clone.querySelectorAll("[data-local-edit-control], [data-local-publish-panel]").forEach((node) => node.remove());
       clone.querySelectorAll("[data-deploy-status]").forEach((node) => {
         node.textContent = "Published version generated from reviewed local edits.";
@@ -447,14 +558,10 @@ def render_local_edit_script() -> str:
     async function postEditedReport(body) {
       const params = new URLSearchParams(window.location.search);
       const configuredApiBase = String(params.get("apiBaseUrl") || params.get("backend") || params.get("api") || "").replace(/\\/+$/, "");
-      const inferredBasePath = window.location.pathname === "/ux-ui" || window.location.pathname.startsWith("/ux-ui/")
-        ? new URL("/ux-ui", window.location.href).href.replace(/\\/+$/, "")
-        : "";
       const requestHeaders = {"Content-Type": "application/json"};
-      if ((configuredApiBase || inferredBasePath).includes("ngrok")) requestHeaders["ngrok-skip-browser-warning"] = "true";
+      if (configuredApiBase.includes("ngrok")) requestHeaders["ngrok-skip-browser-warning"] = "true";
       const endpoints = [
         ...(configuredApiBase ? [`${configuredApiBase}/api/reports/deploy`] : []),
-        ...(inferredBasePath ? [`${inferredBasePath}/api/reports/deploy`] : []),
         new URL("/api/reports/deploy", window.location.href).href,
         new URL("api/reports/deploy", window.location.href).href,
         new URL("../../api/reports/deploy", window.location.href).href
@@ -607,105 +714,6 @@ def render_axis_tile(axis: Dict[str, Any], index: int) -> str:
         <input type="number" min="0" max="10" step="0.1" value="{score:.1f}" data-axis-score-input>
       </label>
     </article>
-    """
-
-
-def render_independent_review(payload: Dict[str, Any]) -> str:
-    review = payload.get("independentReview")
-    if not isinstance(review, dict):
-        return ""
-
-    context = review.get("review_context") if isinstance(review.get("review_context"), dict) else {}
-    missed = [item for item in (review.get("missed_issues") or []) if isinstance(item, dict)]
-    questioned = [item for item in (review.get("agent_findings_to_question") or []) if isinstance(item, dict)]
-    kept = [item for item in (review.get("agent_findings_to_keep") or []) if isinstance(item, dict)]
-    insertions = [item for item in (review.get("final_report_insertions") or []) if isinstance(item, dict)]
-
-    if not (missed or questioned or kept or insertions):
-        return ""
-
-    def issue_card(item: Dict[str, Any], index: int) -> str:
-        severity = severity_tone(item.get("severity"))
-        title = clean_text(item.get("title")) or "Independent review issue"
-        category = clean_text(item.get("category")) or "UX/UI"
-        page = clean_text(item.get("page"))
-        evidence = clean_text(item.get("evidence"))
-        why = clean_text(item.get("why_it_matters"))
-        recommendation = clean_text(item.get("recommendation"))
-        confidence = clean_text(item.get("confidence")) or "Medium"
-        return f"""
-        <article class="qa-card tone-{html.escape(severity)}">
-          <div class="qa-card-top">
-            <span class="qa-index">{index:02d}</span>
-            <span class="severity-dot severity-{html.escape(severity)}">{html.escape(severity_label(severity))}</span>
-          </div>
-          <h3>{html.escape(title)}</h3>
-          <p class="qa-meta">{html.escape(category)}{f' · {html.escape(page)}' if page else ''} · Confidence: {html.escape(confidence)}</p>
-          {f'<p><strong>Evidence:</strong> {html.escape(evidence)}</p>' if evidence else ''}
-          {f'<p><strong>Why it matters:</strong> {html.escape(why)}</p>' if why else ''}
-          {f'<p><strong>Recommended move:</strong> {html.escape(recommendation)}</p>' if recommendation else ''}
-        </article>
-        """
-
-    def question_card(item: Dict[str, Any], index: int) -> str:
-        title = clean_text(item.get("title_or_reference")) or "Finding to review"
-        problem = clean_text(item.get("problem")) or "Needs review"
-        reason = clean_text(item.get("reason"))
-        action = clean_text(item.get("suggested_action")) or "Verify"
-        return f"""
-        <article class="qa-note-card">
-          <span class="qa-index">{index:02d}</span>
-          <h4>{html.escape(title)}</h4>
-          <p class="qa-meta">{html.escape(problem)} · Suggested action: {html.escape(action)}</p>
-          {f'<p>{html.escape(reason)}</p>' if reason else ''}
-        </article>
-        """
-
-    def kept_card(item: Dict[str, Any], index: int) -> str:
-        title = clean_text(item.get("title")) or "Finding to keep"
-        reason = clean_text(item.get("reason"))
-        strength = clean_text(item.get("evidence_strength")) or "Medium"
-        return f"""
-        <article class="qa-note-card">
-          <span class="qa-index">{index:02d}</span>
-          <h4>{html.escape(title)}</h4>
-          <p class="qa-meta">Evidence strength: {html.escape(strength)}</p>
-          {f'<p>{html.escape(reason)}</p>' if reason else ''}
-        </article>
-        """
-
-    missed_html = "".join(issue_card(item, index) for index, item in enumerate(missed, start=1))
-    questioned_html = "".join(question_card(item, index) for index, item in enumerate(questioned, start=1))
-    kept_html = "".join(kept_card(item, index) for index, item in enumerate(kept, start=1))
-    insertion_html = "".join(
-        f"""
-        <li>
-          <strong>{html.escape(clean_text(item.get("section")) or "Report note")}:</strong>
-          {html.escape(clean_text(item.get("text")))}
-        </li>
-        """
-        for item in insertions
-        if clean_text(item.get("text"))
-    )
-    used_files = ", ".join(clean_text(item) for item in (context.get("used_files") or []) if clean_text(item))
-    notes = clean_text(context.get("notes"))
-
-    return f"""
-    <section class="section-panel independent-review-section" id="independent-review">
-      <div class="section-head">
-        <div>
-          <p class="eyebrow">Independent QA Review</p>
-          <h2>External review additions and corrections</h2>
-          <p class="qa-lede">This section separates the external ChatGPT QA pass from the automated audit findings. Use it to add high-confidence missed issues and to downgrade findings that need manual verification.</p>
-          {f'<p class="qa-source"><strong>Inputs reviewed:</strong> {html.escape(used_files)}</p>' if used_files else ''}
-          {f'<p class="qa-source">{html.escape(notes)}</p>' if notes else ''}
-        </div>
-      </div>
-      {f'<h3 class="qa-subhead">Missed issues to add</h3><div class="qa-grid">{missed_html}</div>' if missed_html else ''}
-      {f'<h3 class="qa-subhead">Automated findings to question</h3><div class="qa-note-grid">{questioned_html}</div>' if questioned_html else ''}
-      {f'<h3 class="qa-subhead">Automated findings to keep</h3><div class="qa-note-grid">{kept_html}</div>' if kept_html else ''}
-      {f'<h3 class="qa-subhead">Final report insertion notes</h3><ul class="qa-insertion-list">{insertion_html}</ul>' if insertion_html else ''}
-    </section>
     """
 
 
@@ -1311,27 +1319,47 @@ def render_html(payload: Dict[str, Any], output_dir: Path) -> str:
         for index, item in enumerate(methodology)
     )
     reco_items = recommendations[:5]
-    reco_html = "".join(
-        f"""
-        <details class="reco-card priority-{html.escape(clean_text(item.get('priority')).lower().replace(' ', '-') or 'normal')}" {"open" if index == 0 else ""}>
-          <summary>
-            <span class="reco-orb">{index + 1:02d}</span>
-            <span class="reco-summary-copy">
-              <span class="reco-badge">{html.escape(clean_text(item.get("priority")) or "Action")}</span>
-              <strong>{html.escape(display_copy(item.get("title")))}</strong>
-            </span>
-            <span class="reco-toggle" aria-hidden="true">+</span>
-          </summary>
-          <div class="reco-body">
-            <p>{html.escape(display_copy(item.get("description")))}</p>
-            {f'<p class="reco-impact">{html.escape(display_copy(item.get("impact")))}</p>' if clean_text(item.get("impact")) else ''}
-            {f'<span class="reco-axis">{html.escape(display_copy(item.get("axis")))}</span>' if clean_text(item.get("axis")) else ''}
-          </div>
-        </details>
-        """
-        for index, item in enumerate(reco_items)
-    )
-    independent_review_html = render_independent_review(payload)
+    reco_cards = []
+    for index, item in enumerate(reco_items):
+        priority = clean_text(item.get("priority")) or "Action"
+        title = display_copy(item.get("title")) or "Recommended action"
+        description = display_copy(item.get("description")) or "Describe the recommendation."
+        impact = display_copy(item.get("impact"))
+        axis = display_copy(item.get("axis"))
+        impact_html = (
+            f'<p class="reco-impact"><span data-reco-editable="impact">{html.escape(impact)}</span></p>'
+            if clean_text(impact)
+            else ""
+        )
+        axis_html = (
+            f'<span class="reco-axis" data-reco-editable="axis">{html.escape(axis)}</span>'
+            if clean_text(axis)
+            else ""
+        )
+        reco_cards.append(
+            f"""
+            <details class="reco-card priority-{html.escape(priority.lower().replace(' ', '-') or 'normal')}" data-recommendation-card data-reco-index="{index + 1}" {"open" if index == 0 else ""}>
+              <summary>
+                <span class="reco-orb">{index + 1:02d}</span>
+                <span class="reco-summary-copy">
+                  <span class="reco-badge" data-reco-editable="priority">{html.escape(priority)}</span>
+                  <strong data-reco-editable="title">{html.escape(title)}</strong>
+                </span>
+                <span class="reco-actions" data-local-edit-control>
+                  <button class="edit-chip reco-edit-button" type="button" data-reco-action="edit" aria-pressed="false">Edit</button>
+                  <button class="edit-chip reco-edit-button" type="button" data-reco-action="delete">Delete</button>
+                </span>
+                <span class="reco-toggle" aria-hidden="true">+</span>
+              </summary>
+              <div class="reco-body">
+                <p data-reco-editable="description">{html.escape(description)}</p>
+                {impact_html}
+                {axis_html}
+              </div>
+            </details>
+            """
+        )
+    reco_html = "".join(reco_cards)
     strongest_axis = summary.get("strongestAxis") or {}
     weakest_axis = summary.get("weakestAxis") or {}
     strongest = axis_label(strongest_axis.get("id"), strongest_axis.get("shortName") or strongest_axis.get("name")) if strongest_axis else ""
@@ -1364,7 +1392,7 @@ def render_html(payload: Dict[str, Any], output_dir: Path) -> str:
     scan_eyebrow = "Screens Captured" if is_live_mobile_audit else "Screenshots Analyzed" if is_screenshot_audit else "Pages Scanned"
     scan_heading = "Representative mobile app screens reviewed during the audit" if is_live_mobile_audit else "Representative screenshots reviewed during the audit" if is_screenshot_audit else "Representative pages captured during the audit"
     nav_scope_label = "Input scope" if is_screenshot_audit else "Navigation scope"
-    booking_to = os.getenv("GTM_BOOKING_EMAIL", "mohamedyassineabdi75@gmail.com").strip() or "mohamedyassineabdi75@gmail.com"
+    booking_to = "mohamedyassineabdi75@gmail.com"
     booking_subject = f"Free 30-minute UX/UI session for {company_name}"
     booking_body = (
         f"Hello Yassine,\n\n"
@@ -1910,92 +1938,6 @@ def render_html(payload: Dict[str, Any], output_dir: Path) -> str:
       max-width: 46ch;
       font-size: 0.96rem;
     }}
-    .independent-review-section {{
-      margin-top: 44px;
-    }}
-    .qa-lede,
-    .qa-source {{
-      margin-top: 8px;
-      max-width: 76ch;
-    }}
-    .qa-subhead {{
-      margin: 28px 0 14px;
-      font-size: 1.15rem;
-      letter-spacing: 0;
-    }}
-    .qa-grid,
-    .qa-note-grid {{
-      display: grid;
-      gap: 14px;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    }}
-    .qa-card,
-    .qa-note-card {{
-      display: grid;
-      gap: 10px;
-      min-width: 0;
-      padding: 18px;
-      border: 1px solid rgba(32,39,51,0.10);
-      border-radius: 2px;
-      background: rgba(255,255,255,0.86);
-      box-shadow: 0 16px 32px rgba(32,39,51,0.05);
-    }}
-    .qa-card {{
-      border-left: 4px solid var(--gold);
-    }}
-    .qa-card.tone-high {{
-      border-left-color: var(--red);
-    }}
-    .qa-card.tone-medium {{
-      border-left-color: #caa23b;
-    }}
-    .qa-card.tone-low {{
-      border-left-color: var(--teal);
-    }}
-    .qa-card-top {{
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-    }}
-    .qa-index {{
-      color: var(--muted);
-      font-size: 0.76rem;
-      font-weight: 800;
-      letter-spacing: 0.12em;
-    }}
-    .qa-card h3,
-    .qa-note-card h4 {{
-      font-size: 1rem;
-      line-height: 1.28;
-      letter-spacing: 0;
-    }}
-    .qa-card p,
-    .qa-note-card p {{
-      font-size: 0.9rem;
-      line-height: 1.55;
-    }}
-    .qa-meta {{
-      color: var(--muted);
-      font-size: 0.82rem;
-      font-weight: 650;
-    }}
-    .qa-insertion-list {{
-      display: grid;
-      gap: 10px;
-      margin: 0;
-      padding: 0;
-      list-style: none;
-    }}
-    .qa-insertion-list li {{
-      padding: 14px 16px;
-      border: 1px solid rgba(32,39,51,0.09);
-      background: rgba(255,255,255,0.72);
-      color: var(--muted);
-    }}
-    .qa-insertion-list strong {{
-      color: var(--ink);
-    }}
     .context-grid,
     .method-grid {{
       display: grid;
@@ -2020,6 +1962,17 @@ def render_html(payload: Dict[str, Any], output_dir: Path) -> str:
       margin-bottom: 0;
       padding-top: 18px;
       border-top: 1px solid rgba(32,39,51,0.08);
+    }}
+    .reco-head-actions {{
+      display: flex;
+      align-items: flex-start;
+      justify-content: flex-start;
+      margin-top: 18px;
+    }}
+    .reco-add-button {{
+      background: var(--ink);
+      border-color: var(--ink);
+      color: #fff;
     }}
     .reco-copy h2 {{
       max-width: 11ch;
@@ -2668,6 +2621,12 @@ def render_html(payload: Dict[str, Any], output_dir: Path) -> str:
       background: rgba(17,136,110,0.08);
       padding: 2px 4px;
     }}
+    [data-reco-editable][contenteditable="true"] {{
+      outline: 2px solid rgba(17,136,110,0.34);
+      border-radius: 4px;
+      background: rgba(17,136,110,0.08);
+      padding: 2px 4px;
+    }}
     @media (max-width: 760px) {{
       .issue-title-row {{
         display: grid;
@@ -2738,7 +2697,7 @@ def render_html(payload: Dict[str, Any], output_dir: Path) -> str:
     }}
     .reco-card summary {{
       display: grid;
-      grid-template-columns: 44px minmax(0, 1fr) 34px;
+      grid-template-columns: 44px minmax(0, 1fr) auto 34px;
       gap: 14px;
       align-items: center;
       padding: 18px 20px;
@@ -2782,6 +2741,17 @@ def render_html(payload: Dict[str, Any], output_dir: Path) -> str:
       color: var(--ink);
       font-size: clamp(1.05rem, 1.6vw, 1.35rem);
       line-height: 1.18;
+    }}
+    .reco-actions {{
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+      justify-content: flex-end;
+    }}
+    .reco-edit-button {{
+      padding: 6px 9px;
+      font-size: 0.74rem;
+      white-space: nowrap;
     }}
     .reco-toggle {{
       display: inline-grid;
@@ -3005,6 +2975,11 @@ def render_html(payload: Dict[str, Any], output_dir: Path) -> str:
         grid-template-columns: 38px minmax(0, 1fr) 30px;
         padding: 16px;
       }}
+      .reco-actions {{
+        grid-column: 2 / -1;
+        grid-row: 2;
+        justify-content: flex-start;
+      }}
       .reco-body {{
         padding: 0 16px 18px;
       }}
@@ -3043,7 +3018,6 @@ def render_html(payload: Dict[str, Any], output_dir: Path) -> str:
         <a href="#methodology">Methodology</a>
         <a href="#priorities">Findings</a>
         <a href="#scores">Scores</a>
-        {f'<a href="#independent-review">QA Review</a>' if independent_review_html else ''}
         <a href="#recommendations">Recommendations</a>
       </nav>
     </header>
@@ -3110,8 +3084,6 @@ def render_html(payload: Dict[str, Any], output_dir: Path) -> str:
       {issue_tabs_html}
     </section>
 
-    {independent_review_html}
-
     <section class="section-panel recommendations-section" id="recommendations">
       <div class="reco-stage">
         <div class="section-head reco-copy">
@@ -3120,8 +3092,11 @@ def render_html(payload: Dict[str, Any], output_dir: Path) -> str:
           <h2>Prioritized actions</h2>
           <p class="reco-lede">The highest-impact fixes are ordered for execution, with acceptance targets and business risk kept with each action.</p>
           </div>
+          <div class="reco-head-actions" data-local-edit-control>
+            <button class="edit-chip reco-add-button" type="button" data-reco-action="add">Add recommendation</button>
+          </div>
         </div>
-        <div class="reco-stack">{reco_html or "<p class='empty'>No prioritized recommendation was generated yet.</p>"}</div>
+        <div class="reco-stack" data-reco-list>{reco_html or "<p class='empty' data-reco-empty>No prioritized recommendation was generated yet.</p>"}</div>
       </div>
     </section>
 

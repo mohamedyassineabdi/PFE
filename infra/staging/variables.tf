@@ -313,6 +313,31 @@ variable "ux_enable_vercel" {
   default     = true
 }
 
+variable "ux_vercel_token" {
+  description = "Vercel token used by the UI/UX report deployment service"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "ux_vercel_org_id" {
+  description = "Vercel team/org ID used by the UI/UX report deployment service"
+  type        = string
+  default     = ""
+}
+
+variable "ux_vercel_project_id" {
+  description = "Vercel project ID used by the UI/UX report deployment service"
+  type        = string
+  default     = ""
+}
+
+variable "ux_vercel_scope" {
+  description = "Optional Vercel scope name or team slug for CLI deploys. Leave empty when the linked project is enough."
+  type        = string
+  default     = ""
+}
+
 variable "portal_auth_session_ttl_hours" {
   description = "Portal auth session lifetime in hours"
   type        = number
@@ -325,6 +350,24 @@ variable "portal_auth_invite_ttl_hours" {
   default     = 72
 }
 
+variable "portal_auth_ses_region" {
+  description = "AWS SES region used by portal auth invitation emails. Defaults to aws_region when empty."
+  type        = string
+  default     = ""
+}
+
+variable "portal_auth_ses_from_email" {
+  description = "Verified SES sender email for portal auth invitation emails. Leave empty to disable email delivery."
+  type        = string
+  default     = ""
+}
+
+variable "portal_auth_ses_configuration_set" {
+  description = "Optional SES configuration set for portal auth invitation emails."
+  type        = string
+  default     = ""
+}
+
 variable "portal_auth_admin_email_secret_name" {
   description = "Optional override for the portal auth bootstrap admin email secret name"
   type        = string
@@ -335,6 +378,20 @@ variable "portal_auth_admin_password_secret_name" {
   description = "Optional override for the portal auth bootstrap admin password secret name"
   type        = string
   default     = ""
+}
+
+variable "portal_auth_admin_email" {
+  description = "Bootstrap admin email for the internal portal auth service"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "portal_auth_admin_password" {
+  description = "Bootstrap admin password for the internal portal auth service"
+  type        = string
+  default     = ""
+  sensitive   = true
 }
 
 variable "ux_enable_ai_review" {
@@ -457,6 +514,27 @@ variable "ux_ollama_api_key_secret_name" {
   default     = ""
 }
 
+variable "ux_figma_token" {
+  description = "UI/UX FIGMA_TOKEN value"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "ux_ai_review_api_key" {
+  description = "UI/UX AI_REVIEW_API_KEY value for non-Ollama providers"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "ux_ollama_api_key" {
+  description = "UI/UX OLLAMA_API_KEY value"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 variable "ux_vercel_token_secret_name" {
   description = "Optional override for the UI/UX Vercel token secret name"
   type        = string
@@ -570,6 +648,27 @@ variable "cx_langsearch_base_url" {
   description = "LangSearch base URL used by the CX backend"
   type        = string
   default     = "https://api.langsearch.com/v1"
+}
+
+variable "cx_mistral_api_key" {
+  description = "CX MISTRAL_API_KEY value"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "cx_langsearch_api_key" {
+  description = "CX LANGSEARCH_API_KEY value"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "cx_consultation_receiver_email" {
+  description = "CX consultation receiver email"
+  type        = string
+  default     = ""
+  sensitive   = true
 }
 
 variable "cx_metabase_dashboard_id" {

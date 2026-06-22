@@ -816,6 +816,7 @@ def _static_root_for_audit_index(index_path: Path) -> Path | None:
 
 
 def _local_report_path_from_request_path(request_path: str) -> Path | None:
+    request_path = _strip_public_base_path(request_path)
     if request_path.startswith("/audits/"):
         return _local_audit_static_path(request_path)
     if request_path.startswith("/artifacts/"):

@@ -25,6 +25,10 @@ metabase_image_uri         = "metabase/metabase:v0.47.6"
 metabase_alb_listener_port = 3000
 
 ux_enable_vercel          = true
+ux_vercel_token           = ""
+ux_vercel_org_id          = ""
+ux_vercel_project_id      = ""
+ux_vercel_scope           = ""
 ux_enable_ai_review       = true
 ux_enable_figma_ai_review = false
 ux_ai_review_backend      = "ollama"
@@ -36,6 +40,15 @@ ux_ollama_bootstrap_model = "gpt-oss:120b-cloud"
 ux_ollama_report_model    = "gpt-oss:120b-cloud"
 ux_ollama_ai_review_model = "gpt-oss:120b-cloud"
 ux_gtm_vision_model       = "qwen3-vl:235b-cloud"
+ux_figma_token            = ""
+ux_ai_review_api_key      = ""
+ux_ollama_api_key         = ""
+
+portal_auth_ses_region                = ""
+portal_auth_ses_from_email            = ""
+portal_auth_ses_configuration_set     = ""
+portal_auth_admin_email               = ""
+portal_auth_admin_password            = ""
 
 create_cx_rds    = true
 cx_db_name       = "cxportal"
@@ -43,6 +56,10 @@ cx_db_username   = "cxportal"
 cx_db_password   = "ChangeMe123!"
 cx_app_env       = "staging"
 cx_mistral_model = "mistral-medium"
+cx_mistral_api_key              = ""
+cx_langsearch_api_key           = ""
+cx_consultation_receiver_email  = ""
+metabase_embedding_secret       = ""
 
 seed_placeholder_secrets = true
 

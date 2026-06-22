@@ -1902,16 +1902,24 @@
         padding-right: 10px;
       }
 
+      .criteria-editor-form input,
       .criteria-editor-form textarea {
         background: rgba(16, 16, 28, 0.46);
         border: 1px solid rgba(168, 160, 209, 0.18);
         border-radius: 14px;
         color: var(--text);
         font: inherit;
-        min-height: 108px;
         padding: 14px 16px;
-        resize: vertical;
         width: 100%;
+      }
+
+      .criteria-editor-form input {
+        min-height: 52px;
+      }
+
+      .criteria-editor-form textarea {
+        min-height: 108px;
+        resize: vertical;
       }
 
       .criteria-editor-form textarea.small {
@@ -3251,6 +3259,7 @@
 
       :root[data-theme="light"] .field input,
       :root[data-theme="light"] .field select,
+      :root[data-theme="light"] .criteria-editor-form input,
       :root[data-theme="light"] .criteria-editor-form textarea {
         background: rgba(255, 255, 255, 0.78);
         border-color: rgba(50, 48, 78, 0.14);
@@ -4125,7 +4134,18 @@
 
       const BACKEND_OVERRIDE_STORAGE_KEY = "UX_UI_AUDITOR_API_BASE_URL";
       const APP_CONFIG = readInjectedConfig();
-      const DEFAULT_API_BASE_URL = normalizeApiBaseUrl(APP_CONFIG.apiBaseUrl || "");
+
+      function inferDefaultApiBaseUrl() {
+        const configured = normalizeApiBaseUrl(APP_CONFIG.apiBaseUrl || "");
+        if (configured) return configured;
+        const configuredBasePath = normalizeApiBaseUrl(APP_CONFIG.basePath || APP_CONFIG.publicBasePath || "");
+        if (configuredBasePath) return configuredBasePath;
+        const currentPath = window.location.pathname || "";
+        if (currentPath === "/ux-ui" || currentPath.startsWith("/ux-ui/")) return "/ux-ui";
+        return "";
+      }
+
+      const DEFAULT_API_BASE_URL = inferDefaultApiBaseUrl();
 
       function getConfiguredApiBaseUrl() {
         const localOverride = window.localStorage.getItem(BACKEND_OVERRIDE_STORAGE_KEY) || "";
@@ -4877,7 +4897,6 @@
             )
           ),
           auditUnlocked &&
-            transitionProgress > 0.45 &&
             e(
               "button",
               {

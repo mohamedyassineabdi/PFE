@@ -54,7 +54,7 @@ locals {
       },
       {
         name  = "ALLOWED_ORIGIN"
-        value = local.ux_ui_url
+        value = var.ux_ui_domain != "" ? local.ux_ui_url : local.portal_external_url
       }
     ],
     var.ux_enable_ai_review ? [
@@ -357,6 +357,18 @@ resource "aws_ecs_task_definition" "portal_auth" {
         {
           name  = "PORTAL_AUTH_ALLOWED_ORIGINS"
           value = join(",", local.portal_auth_allowed_origins)
+        },
+        {
+          name  = "PORTAL_AUTH_SES_REGION"
+          value = var.portal_auth_ses_region != "" ? var.portal_auth_ses_region : var.aws_region
+        },
+        {
+          name  = "PORTAL_AUTH_SES_FROM_EMAIL"
+          value = var.portal_auth_ses_from_email
+        },
+        {
+          name  = "PORTAL_AUTH_SES_CONFIGURATION_SET"
+          value = var.portal_auth_ses_configuration_set
         }
       ]
       secrets = [
