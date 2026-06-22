@@ -2,6 +2,7 @@
 
 This repository contains the portal, the UI/UX audit agent, the CX assessment application, and the AWS infrastructure used to run them together.
 
+
 ## Root Layout
 
 - `internal_portal/` is the entry portal. It contains the public landing/index experience and the lightweight auth service used for login, user invites, and admin access.
