@@ -214,13 +214,13 @@ variable "cx_backend_container_memory" {
 variable "metabase_container_cpu" {
   description = "Metabase container CPU units"
   type        = number
-  default     = 1024
+  default     = 512
 }
 
 variable "metabase_container_memory" {
   description = "Metabase container memory in MB"
   type        = number
-  default     = 2048
+  default     = 1024
 }
 
 variable "portal_desired_count" {
